@@ -9,10 +9,10 @@ Ce projet reconstruit l'argument d'un livre sous droits. Il n'en reproduit pas l
 - Ce que le dépôt contient du livre : de courtes citations (433 passages, presque tous de quelques mots ; au plus 29 mots consécutifs pour Lordon), chacune avec son repère (section et paragraphe), et les titres de ses sections, utilisés comme repères. Le texte lui-même n'est pas distribué : le dossier `source/` est exclu du dépôt, et `outils/check.py` vérifie qu'il le reste.
 - Ces citations relèvent du droit de courte citation (Code de la propriété intellectuelle, art. L122-5, 3°) : elles sont incorporées à un travail d'analyse et leur source est indiquée. Elles ne sont **pas** couvertes par les licences du dépôt (voir `LICENSE`).
 
-## La version anglaise
+## Les versions anglaise et allemande
 
-- La version anglaise traduit la reconstruction (titres, énoncés, démonstrations, commentaires). Elle est faite sur la reconstruction française, non sur la traduction anglaise publiée, qui n'est ni utilisée ni citée.
-- Dans les corps anglais, les mots de Lordon, quand ils sont cités, sont rendus brièvement par nous, avec les mêmes repères ; le champ `citation` garde l'original français.
+- Les versions anglaise et allemande traduisent la reconstruction (titres, énoncés, démonstrations, commentaires). Elles sont faites sur la reconstruction française, non sur une traduction publiée du livre (en anglais, celle de Verso), qui n'est ni utilisée ni citée.
+- Dans les corps anglais et allemands, les mots de Lordon, quand ils sont cités, sont rendus brièvement par nous, avec les mêmes repères ; le champ `citation` garde l'original français.
 - Les titres de section et les repères (§ 08.4) renvoient à l'édition française.
 
 ## Spinoza
@@ -26,8 +26,8 @@ Les citations de Marx et Engels, Kant, Pascal, Camus, Bourdieu, Deleuze, Balibar
 
 ## Le projet
 
-- Reconstruction, traduction anglaise, outils et explorateur : auteur du dépôt [mqtin](https://github.com/mqtin), 2026, avec l'aide de Claude (Anthropic).
+- Reconstruction, traductions anglaise et allemande, outils et explorateur : auteur du dépôt [mqtin](https://github.com/mqtin), 2026, avec l'aide de Claude (Anthropic).
 - L'explorateur est adapté de celui d'Homo Status, autre projet du même auteur (<https://treillis.qpetit.com/status>).
-- Licences : code sous GPL-3.0, travail de reconstruction (et sa traduction) sous CC BY-SA 4.0, citations exclues (voir `LICENSE`).
+- Licences : code sous GPL-3.0, travail de reconstruction (et ses traductions) sous CC BY-SA 4.0, citations exclues (voir `LICENSE`).
 
 **Ces mentions doivent être conservées** dans toute redistribution du dépôt ou d'`explorer.html`.

@@ -25,6 +25,9 @@ LOC_RE = re.compile(r"^(\d\d)\.(\d+)$")
 # Copie locale de SpinozaGraph, si elle est à côté : pour vérifier que les renvois à l'Éthique existent.
 SPINOZA_ELEMENTS = ROOT.parent / "SpinozaGraph" / "elements"
 
+LOC_FR = lambda s: sorted(set(re.findall(r"\b\d\d\.\d+\b", s)))
+LOC_DE = LOC_FR
+
 
 def main() -> int:
     if hasattr(sys.stdout, "reconfigure"):
@@ -119,7 +122,29 @@ def main() -> int:
                 if (f in e["sections"]) != (en in e["sections_en"]):
                     errors.append(f"{eid} : section « {f} » sans équivalent « {en} » (ou l'inverse)")
 
+        # Version allemande (AGENT.md § 5 ter) : mêmes étapes, mêmes renvois, mêmes repères.
+        SECTIONS_DE = {"Démonstration": "Beweis", "Argumentation": "Argumentation", "Scolie": "Anmerkung",
+                       "Chez Lordon": "Bei Lordon", "Telle que Lordon la présente": "Wie Lordon sie darstellt"}
+        miss = [k for k in ("titre_de", "enonce_de", "body_de") if not e[k]]
+        if miss:
+            warnings.append(f"{eid} : traduction allemande manquante ({', '.join(miss)})")
+        else:
+            steps = lambda s: len(re.findall(r"^\d+\. ", s, re.M))
+            if steps(e["body"]) != steps(e["body_de"]):
+                errors.append(f"{eid} : {steps(e['body'])} étapes en français, {steps(e['body_de'])} en allemand")
+            if e["demo_refs"] != e["demo_refs_de"]:
+                errors.append(f"{eid} : la démonstration allemande invoque {e['demo_refs_de']}, la française {e['demo_refs']}")
+            if set(e["mentions"]) != set(ID_RE.findall(e["body_de"])):
+                warnings.append(f"{eid} : identifiants différents entre corps français et allemand")
+            if LOC_FR(e["body"]) != LOC_DE(e["body_de"]):
+                warnings.append(f"{eid} : repères différents entre français et allemand")
+            for f, de in SECTIONS_DE.items():
+                if (f in e["sections"]) != (de in e["sections_de"]):
+                    errors.append(f"{eid} : section « {f} » sans équivalent « {de} » (ou l'inverse)")
+
     for p in data["partie_docs"]:
+        if not (p["titre_de"] and p["body_de"]):
+            warnings.append(f"parties/{p['id']}.md : traduction allemande manquante")
         if not (p["titre_en"] and p["body_en"]):
             warnings.append(f"parties/{p['id']}.md : traduction anglaise manquante")
 
@@ -168,7 +193,7 @@ def main() -> int:
     for t in tracked:
         errors.append(f"{t} est suivi par Git : le texte du livre ne doit jamais être versionné")
     for e in els:
-        for q in re.findall(r"«\s*([^«»]+?)\s*»", e["body"] + " " + e["body_en"]):
+        for q in re.findall(r"«\s*([^«»]+?)\s*»", e["body"] + " " + e["body_en"] + " " + e["body_de"]):
             if len(q) > MAX_CITATION:
                 errors.append(f"{e['id']} : citation de {len(q)} caractères dans le corps (max. {MAX_CITATION})")
 

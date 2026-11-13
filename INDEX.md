@@ -119,7 +119,7 @@ Table de tous les éléments, par partie. Chaque ligne : identifiant, titre, rep
 | id | type | titre | repères | Éthique / réf. | statut |
 |---|---|---|---|---|---|
 | D14 | Concept | Épithumè et épithumogénie | 19.1, 19.2 |  | verifie-texte |
-| D15 | Concept | Affects intrinsèques et extrinsèques | 19.5 |  | verifie-texte |
+| D15 | Concept | Affects intrinsèques et extrinsèques | 19.4, 19.5 |  | verifie-texte |
 | D16 | Concept | Obsequium | 21.3 |  | verifie-texte |
 | D17 | Concept | Puissance axiogène du désir | 22.2, 22.3 |  | verifie-texte |
 | D18 | Concept | Images vocationnelles et précolinéarisation | 24.3, 24.4, 25.1 |  | verifie-texte |
@@ -194,3 +194,4 @@ Table de tous les éléments, par partie. Chaque ligne : identifiant, titre, rep
 - **2026-11-13** : à la demande de l'auteur, thèses regroupées en unités plus grosses : 34 → 19 (T001-T019, renumérotées ; renvois des prémisses et concepts mis à jour).
 - **2026-11-13** : pilote rédigé (avant-propos et chapitre 1) : 9 prémisses de Spinoza, 3 de Marx, 13 concepts, 5 positions réfutées, 34 thèses ; toutes en `brouillon`, en attente de la relecture de l'auteur. Repères par section et paragraphe, l'EPUB n'ayant pas de pagination.
 - **2026-11-13** : création du dépôt (AGENT.md, outillage adapté d'Homo Status, fiches de parties provisoires). En attente du fichier du livre pour le pilote (avant-propos et chapitre 1).
+- **2026-11-13.** Version allemande : les 137 éléments, les parties, le parcours (`PARCOURS.de.md`) et la notice (`NOTICE.de.md`) sont traduits, à partir de la reconstruction, sans traduction publiée du livre ; l'explorateur est trilingue (FR / EN / DE, `?lang=de`). `check.py` vérifie la concordance de l'allemand avec le français (mêmes étapes, renvois et repères ; AGENT.md § 5 ter).
