@@ -33,7 +33,14 @@ python outils/build_explorer.py   # -> explorer.html
 | `PARCOURS.md` | parcours de lecture en seize étapes |
 | `INDEX.md` | table des éléments, plan, journal |
 | `AGENT.md` | méthode, conventions et règles de fidélité |
+| `LICENSE`, `NOTICE.md`, `LICENSES/` | licences, sources et mentions de droits |
 
 ---
 
-**English.** Frédéric Lordon's *Capitalisme, désir et servitude* (2010; English translation *Willing Slaves of Capital*, Verso, 2014) reconstructed in geometrical order as an explorable graph, linked to Spinoza's *Ethics* in SpinozaGraph. Statements are paraphrases with section and paragraph references, in French; quotations are kept short.
+## Droits et licences
+
+Le livre est sous droits (© Frédéric Lordon et La Fabrique, 2010) : le dépôt n'en contient pas le texte, seulement de courtes citations référencées, qui restent à leurs ayants droit. Le code est sous GPL-3.0, le travail de reconstruction sous CC BY-SA 4.0. Voir [LICENSE](LICENSE) et [NOTICE.md](NOTICE.md), à conserver dans toute redistribution.
+
+---
+
+**English.** Frédéric Lordon's *Capitalisme, désir et servitude* (2010; English translation *Willing Slaves of Capital*, Verso, 2014) reconstructed in geometrical order as an explorable graph, linked to Spinoza's *Ethics* in SpinozaGraph. Statements are paraphrases with section and paragraph references, in French; quotations are kept short and remain the property of their rights holders. The book's text is not included. Online: <https://treillis.qpetit.com/lordon>. Code under GPL-3.0, reconstruction under CC BY-SA 4.0; see LICENSE and NOTICE.md.

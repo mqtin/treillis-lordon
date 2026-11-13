@@ -30,7 +30,7 @@ TEMPLATE = Path(__file__).resolve().parent / "explorer_template.html"
 OUTPUT = ROOT / "explorer.html"
 
 ELEMENT_DIRS = ["definitions", "premisses", "theses", "refutees"]
-DOC_FILES = ["PARCOURS.md", "AGENT.md", "INDEX.md"]
+DOC_FILES = ["PARCOURS.md", "NOTICE.md", "AGENT.md", "INDEX.md"]
 
 # Parties (AGENT.md § 4) : P (prémisses), puis l'avant-propos (0) et les chapitres du livre.
 PARTIE_DIR = "parties"

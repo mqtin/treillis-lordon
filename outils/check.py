@@ -10,6 +10,7 @@ Usage :
 from __future__ import annotations
 
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -130,10 +131,20 @@ def main() -> int:
         if i not in by_id and not any(i in e["corollaires"] for e in els):
             warnings.append(f"{i} listé dans INDEX.md sans fichier")
 
-    # Droits : rien de source/ ne doit être suivi par Git
+    # Droits : rien de source/ ne doit être suivi par Git, et les citations restent courtes
     gi = ROOT / ".gitignore"
     if not gi.exists() or "source/" not in gi.read_text(encoding="utf-8"):
         errors.append(".gitignore doit exclure source/ (texte du livre, sous droits)")
+    try:
+        tracked = subprocess.run(["git", "ls-files", "source"], cwd=ROOT, capture_output=True, text=True).stdout.split()
+    except OSError:
+        tracked = []
+    for t in tracked:
+        errors.append(f"{t} est suivi par Git : le texte du livre ne doit jamais être versionné")
+    for e in els:
+        for q in re.findall(r"«\s*([^«»]+?)\s*»", e["body"]):
+            if len(q) > MAX_CITATION:
+                errors.append(f"{e['id']} : citation de {len(q)} caractères dans le corps (max. {MAX_CITATION})")
 
     for w in warnings:
         print("attention :", w)

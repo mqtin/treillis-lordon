@@ -90,7 +90,8 @@ Exemples et digressions du livre, résumés.
 
 Le livre est sous droits.
 
-- Le fichier du livre et le texte extrait vivent dans `source/`, **exclu de Git** (`.gitignore`). On ne les publie jamais, ni en tout ni en partie.
+- Le fichier du livre et le texte extrait vivent dans `source/`, **exclu de Git** (`.gitignore`). On ne les publie jamais, ni en tout ni en partie. `outils/check.py` signale une erreur si un fichier de `source/` est suivi par Git ou si une citation du corps dépasse 300 caractères.
+- Les citations ne sont pas couvertes par les licences du dépôt (CC BY-SA 4.0 pour la reconstruction, GPL-3.0 pour le code) : voir `LICENSE` et `NOTICE.md`, à tenir à jour.
 - Les éléments **reformulent**. Une citation (champ `citation` ou dans le corps) tient en une ou deux phrases, au plus 300 caractères, entre guillemets, avec son repère, et seulement quand la formule compte (une formule célèbre, un concept). C'est l'usage du droit de citation : courte, justifiée par l'analyse, sourcée.
 - **Repères.** Le fichier de travail est un EPUB sans pagination. Un passage est donc repéré par **section et paragraphe** : `08.4` est le 4e paragraphe de la section 08, « La servitude volontaire n'existe pas ». Les sections sont celles de la table des matières de Lordon (`sections.yaml`, qui ne contient que les titres) ; les paragraphes sont numérotés par `outils/extract_epub.py`, qui produit `source/texte/` à partir de l'EPUB. Un lecteur de l'édition papier retrouve le passage par le titre de section. Si l'auteur fournit plus tard la pagination papier, on l'ajoutera à côté.
 
