@@ -41,6 +41,7 @@ AGENT.md          ce fichier
 sections.yaml     titres des sections du livre, pour les repères (§ 6)
 README.md
 PARCOURS.md       parcours de lecture : un fil d'une quinzaine d'éléments, de la question du livre à sa conclusion
+PARCOURS.en.md    sa version anglaise ; de même NOTICE.en.md (§ 5 bis)
 INDEX.md          table de tous les éléments, plan par chapitre, journal
 parties/          P (prémisses), 0 (avant-propos), 1, 2, 3 (chapitres) : titre de Lordon, sections, résumé
 definitions/      D01.md …
@@ -84,6 +85,8 @@ statut_revision: brouillon  # brouillon | verifie-texte
 Exemples et digressions du livre, résumés.
 ```
 
+**§ 5 bis. Version anglaise.** Chaque élément et chaque partie a sa version anglaise dans le même fichier : `titre_en`, `enonce_en` (ou `resume_en`) dans le front-matter, et, après une ligne `<!-- en -->`, le corps anglais, avec les sections `## Demonstration` (ou `## Argument`), `## Scholium`, `## In Lordon`, `## As Lordon presents it`. Le corps anglais garde les mêmes étapes, les mêmes identifiants et les mêmes repères que le français, ce que `check.py` vérifie. Il traduit la reconstruction, jamais la traduction anglaise publiée (Verso, 2014) ; les mots de Lordon y sont rendus brièvement entre guillemets anglais, et le champ `citation` reste en français. Un document `NOM.md` a sa version dans `NOM.en.md`. Toute correction du français se reporte dans l'anglais.
+
 `depends_on` correspond exactement aux identifiants invoqués dans la démonstration ou l'argumentation. Les identifiants de l'*Éthique* suivent SpinozaGraph : `1def3`, `1ax4`, `3p6`, `3p9sc`, `3p13csc`, `3ad1` (définitions des affects), `3agd` (définition générale des affects), `4pr` (préface), `4appc28` (appendice de la partie IV, chapitre 28). Une démonstration est citée par sa proposition (`3p37` pour « III, 37, démonstration »).
 
 ## 6. Droits et texte source
@@ -106,7 +109,7 @@ Le livre est sous droits.
 
 ## 8. Contrôles
 
-`python outils/check.py` vérifie : identifiants et types, repères présents et bien formés, longueur des citations, existence des dépendances, absence de cycle, concordance entre `depends_on` et la démonstration, arêtes `contre` vers des `R`, renvois à l'*Éthique* existants dans SpinozaGraph (si le dépôt est à côté), cohérence avec `INDEX.md`, exclusion de `source/`. L'onglet « Audit » de l'explorateur affiche les mêmes contrôles.
+`python outils/check.py` vérifie : identifiants et types, repères présents et bien formés, longueur des citations, existence des dépendances, absence de cycle, concordance entre `depends_on` et la démonstration, arêtes `contre` vers des `R`, renvois à l'*Éthique* existants dans SpinozaGraph (si le dépôt est à côté), cohérence avec `INDEX.md`, exclusion de `source/`, complétude et concordance de la version anglaise (§ 5 bis). L'onglet « Audit » de l'explorateur affiche les mêmes contrôles.
 
 `python outils/audit_forme.py` fait l'audit de forme, sans juger l'argument : ponctuation et guillemets, structure des fichiers (sections attendues, étapes numérotées, chacune avec son repère, ∎ final), accord entre les repères du corps et le champ `loc`, existence des paragraphes cités, présence des notes citées dans les sections citées, et présence mot pour mot dans le livre de tout passage entre guillemets. Les contrôles qui lisent le livre demandent `source/texte/`.
 

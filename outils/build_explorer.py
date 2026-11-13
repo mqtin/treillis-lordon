@@ -2,8 +2,12 @@
 """Génère explorer.html : interface d'exploration du graphe et des textes.
 
 Lit le front-matter YAML et le corps de chaque élément (definitions/, premisses/,
-theses/, refutees/), les fiches de parties/, ainsi que AGENT.md et INDEX.md, puis
+theses/, refutees/), les fiches de parties/, ainsi que les documents du projet, puis
 injecte le tout dans un fichier HTML autonome (aucune dépendance réseau).
+
+Bilingue : la version anglaise d'un élément ou d'une partie est dans le même fichier
+(champs titre_en, enonce_en, resume_en ; corps anglais après la ligne « <!-- en --> ») ;
+celle d'un document NOM.md est dans NOM.en.md.
 
 Adapté de l'explorateur d'Homo Status (status-and-politics/outils/build_explorer.py).
 
@@ -38,6 +42,7 @@ PARTIE_ORDER = ["P", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
 
 ID_PATTERN = r"[DSMTR]\d{2,3}(?:-C\d+)?"
 ID_RE = re.compile(rf"\b({ID_PATTERN})\b")
+EN_MARK = re.compile(r"^<!--\s*en\s*-->\s*$", re.M)
 FRONT_RE = re.compile(r"\A---\s*\n(.*?)\n---\s*\n?(.*)\Z", re.S)
 
 
@@ -58,6 +63,12 @@ def as_list(value):
     if isinstance(value, list):
         return [str(v).strip() for v in value if v is not None and str(v).strip()]
     return [s.strip() for s in str(value).split(",") if s.strip()]
+
+
+def split_lang(body: str):
+    """Corps français, corps anglais (après la ligne <!-- en -->)."""
+    parts = EN_MARK.split(body, maxsplit=1)
+    return parts[0].strip(), (parts[1].strip() if len(parts) > 1 else "")
 
 
 def sections(body: str) -> dict:
@@ -86,9 +97,11 @@ def load_parties():
             if "_yaml_error" in meta:
                 print(f"Attention : YAML invalide dans {p.name} : {meta['_yaml_error']}", file=sys.stderr)
             pid = str(meta.get("id") or p.stem)
+            fr, en = split_lang(body)
             out.append({"id": pid, "titre": meta.get("titre") or "", "resume": meta.get("resume") or "",
+                        "titre_en": meta.get("titre_en") or "", "resume_en": " ".join(str(meta.get("resume_en") or "").split()),
                         "loc": meta.get("loc") or "",
-                        "body": body.strip(), "file": p.relative_to(ROOT).as_posix()})
+                        "body": fr, "body_en": en, "file": p.relative_to(ROOT).as_posix()})
     out.sort(key=lambda x: PARTIE_ORDER.index(x["id"]) if x["id"] in PARTIE_ORDER else 99)
     return out
 
@@ -111,6 +124,7 @@ def load_elements():
         for path in sorted(folder.glob("*.md")):
             text = path.read_text(encoding="utf-8")
             meta, body = split_front_matter(text)
+            body, body_en = split_lang(body) if meta is not None else (body, "")
             rel = path.relative_to(ROOT).as_posix()
             if meta is None:
                 problems.append({"kind": "frontmatter", "file": rel, "msg": "Pas de front-matter YAML."})
@@ -134,6 +148,8 @@ def load_elements():
                 "partie": str(meta.get("partie") if meta.get("partie") is not None else ""),
                 "titre": meta.get("titre") or "",
                 "enonce": " ".join(str(enonce).split()),
+                "titre_en": meta.get("titre_en") or "",
+                "enonce_en": " ".join(str(meta.get("enonce_en") or "").split()),
                 "citation": " ".join(str(citation).split()),
                 "loc": as_list(meta.get("loc")),
                 "depends_on": as_list(meta.get("depends_on")),
@@ -143,6 +159,10 @@ def load_elements():
                 "lien_explicite": meta.get("lien_explicite"),
                 "statut_revision": meta.get("statut_revision"),
                 "body": body.strip(),
+                "body_en": body_en,
+                "sections_en": list(sections(body_en).keys()),
+                "demo_refs_en": sorted(set(ID_RE.findall(" ".join(v for k, v in sections(body_en).items()
+                                                                    if k in ("Demonstration", "Argument"))))),
                 "sections": list(secs.keys()),
                 "demo_refs": sorted(set(ID_RE.findall(argued))),
                 "mentions": sorted(set(ID_RE.findall(body))),
@@ -158,7 +178,9 @@ def load_documents():
         p = ROOT / name
         if p.exists():
             # Pas de « mentions » : AGENT.md et INDEX.md citent des identifiants en exemple ou en liste.
-            docs.append({"name": name, "kind": "projet", "body": p.read_text(encoding="utf-8")})
+            en = p.with_name(p.stem + ".en.md")
+            docs.append({"name": name, "kind": "projet", "body": p.read_text(encoding="utf-8"),
+                         "body_en": en.read_text(encoding="utf-8") if en.exists() else ""})
     return docs
 
 
@@ -198,7 +220,7 @@ def build() -> Path:
 
 
 def snapshot():
-    files = [ROOT / n for n in DOC_FILES] + [TEMPLATE, ROOT / "sections.yaml"]
+    files = [ROOT / n for n in DOC_FILES] + [ROOT / n.replace(".md", ".en.md") for n in DOC_FILES] + [TEMPLATE, ROOT / "sections.yaml"]
     for d in ELEMENT_DIRS + [PARTIE_DIR]:
         if (ROOT / d).is_dir():
             files += list((ROOT / d).glob("*.md"))

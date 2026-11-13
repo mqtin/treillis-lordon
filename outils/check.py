@@ -15,7 +15,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from build_explorer import ROOT, collect  # noqa: E402
+from build_explorer import ID_RE, ROOT, collect  # noqa: E402
 
 TYPES = {"definition", "spinoza", "marx", "these", "refutee"}
 STATUTS = {"brouillon", "verifie-texte"}
@@ -97,6 +97,32 @@ def main() -> int:
             if deps - refs:
                 errors.append(f"{eid} déclare sans invoquer : {', '.join(sorted(deps - refs))}")
 
+        # Version anglaise (AGENT.md § 5) : mêmes champs, mêmes étapes, mêmes renvois.
+        miss = [k for k in ("titre_en", "enonce_en", "body_en") if not e[k]]
+        if miss:
+            warnings.append(f"{eid} : traduction anglaise manquante ({', '.join(miss)})")
+        else:
+            steps = lambda s: len(re.findall(r"^\d+\. ", s, re.M))
+            if steps(e["body"]) != steps(e["body_en"]):
+                errors.append(f"{eid} : {steps(e['body'])} étapes en français, {steps(e['body_en'])} en anglais")
+            if e["demo_refs"] != e["demo_refs_en"]:
+                errors.append(f"{eid} : la démonstration anglaise invoque {e['demo_refs_en']}, la française {e['demo_refs']}")
+            if set(e["mentions"]) != set(ID_RE.findall(e["body_en"])):
+                warnings.append(f"{eid} : identifiants différents entre corps français et anglais")
+            loc_fr = set(re.findall(r"\b\d\d\.\d+\b", e["body"]))
+            loc_en = set(re.findall(r"\b\d\d\.\d+\b", e["body_en"]))
+            if loc_fr != loc_en:
+                warnings.append(f"{eid} : repères différents entre français et anglais ({', '.join(sorted(loc_fr ^ loc_en))})")
+            for f in ("Démonstration", "Argumentation", "Scolie", "Chez Lordon", "Telle que Lordon la présente"):
+                en = {"Démonstration": "Demonstration", "Argumentation": "Argument", "Scolie": "Scholium",
+                      "Chez Lordon": "In Lordon", "Telle que Lordon la présente": "As Lordon presents it"}[f]
+                if (f in e["sections"]) != (en in e["sections_en"]):
+                    errors.append(f"{eid} : section « {f} » sans équivalent « {en} » (ou l'inverse)")
+
+    for p in data["partie_docs"]:
+        if not (p["titre_en"] and p["body_en"]):
+            warnings.append(f"parties/{p['id']}.md : traduction anglaise manquante")
+
     for r in (e for e in els if e["type"] == "refutee"):
         if not any(r["id"] in e["contre"] for e in els):
             warnings.append(f"{r['id']} : aucune thèse ne la réfute")
@@ -142,7 +168,7 @@ def main() -> int:
     for t in tracked:
         errors.append(f"{t} est suivi par Git : le texte du livre ne doit jamais être versionné")
     for e in els:
-        for q in re.findall(r"«\s*([^«»]+?)\s*»", e["body"]):
+        for q in re.findall(r"«\s*([^«»]+?)\s*»", e["body"] + " " + e["body_en"]):
             if len(q) > MAX_CITATION:
                 errors.append(f"{e['id']} : citation de {len(q)} caractères dans le corps (max. {MAX_CITATION})")
 

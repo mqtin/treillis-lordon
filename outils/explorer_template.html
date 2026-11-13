@@ -4,6 +4,19 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Capitalisme, désir et servitude — treillis</title>
+<meta name="description" content="Le livre de Frédéric Lordon (2010) reconstruit dans l'ordre géométrique : prémisses de Spinoza et de Marx, concepts, thèses, positions réfutées. Frédéric Lordon's Willing Slaves of Capital, reconstructed in geometrical order.">
+<meta name="author" content="mqtin">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Treillis">
+<meta property="og:title" content="Capitalisme, désir et servitude — treillis">
+<meta property="og:description" content="Le livre de Frédéric Lordon reconstruit dans l'ordre géométrique, en graphe explorable. Frédéric Lordon's book, reconstructed in geometrical order as an explorable graph.">
+<meta property="og:url" content="https://treillis.qpetit.com/lordon/">
+<meta property="og:locale" content="fr_FR">
+<meta property="og:locale:alternate" content="en_GB">
+<link rel="canonical" href="https://treillis.qpetit.com/lordon/">
+<link rel="alternate" hreflang="fr" href="https://treillis.qpetit.com/lordon/?lang=fr">
+<link rel="alternate" hreflang="en" href="https://treillis.qpetit.com/lordon/?lang=en">
+<link rel="alternate" hreflang="x-default" href="https://treillis.qpetit.com/lordon/">
 <style>
 :root {
   --bg: #f7f6f2; --panel: #ffffff; --ink: #1f1d1a; --muted: #6b665d; --line: #e2ded5;
@@ -197,6 +210,9 @@ mark { background: var(--hl); color: inherit; padding: 0 1px; }
 .alpha .bar { height: 10px; border-radius: 5px; background: var(--line); overflow: hidden; margin-top: 4px; }
 .alpha .bar > i { display: block; height: 100%; background: var(--these); }
 .audit .hint { color: var(--muted); font-size: 12px; margin: 0 0 4px; }
+.langsw { display: flex; gap: 2px; }
+.langsw button { border: 1px solid var(--line); background: none; border-radius: 5px; padding: 3px 7px; font-size: 12px; cursor: pointer; color: var(--muted); }
+.langsw button.on { color: var(--ink); border-color: var(--ink); font-weight: 600; }
 .kbd { font-family: ui-monospace, Consolas, monospace; border: 1px solid var(--line); border-radius: 3px; padding: 0 4px; font-size: 11px; }
 </style>
 </head>
@@ -210,6 +226,7 @@ mark { background: var(--hl); color: inherit; padding: 0 1px; }
     </div>
     <div id="trail"></div>
     <span class="meta" id="meta"></span>
+    <div class="langsw" role="group" aria-label="Langue / Language"><button data-lang="fr" title="Français">FR</button><button data-lang="en" title="English">EN</button></div>
   </header>
   <aside id="side">
     <input id="search" type="search" placeholder="Rechercher (id, titre, texte) — touche /" autocomplete="off">
@@ -240,14 +257,47 @@ mark { background: var(--hl); color: inherit; padding: 0 1px; }
 <script>
 const DATA = /*__DATA__*/null;
 
+// ---------- Langue ----------
+// Préférence partagée avec l'accueil du site (clé treillis-lang) ; ?lang=en dans l'URL l'emporte.
+const LANGS = ["fr", "en"];
+let LANG = (() => {
+  const q = new URLSearchParams(location.search).get("lang");
+  if (LANGS.includes(q)) return q;
+  try { const s = localStorage.getItem("treillis-lang"); if (LANGS.includes(s)) return s; } catch {}
+  return (navigator.language || "fr").toLowerCase().startsWith("fr") ? "fr" : "en";
+})();
+const tr = (fr, en) => LANG === "en" ? en : fr;
+// Champs traduits : on garde l'original (_fr) et on bascule titre / enonce / body selon la langue.
+const I18N_FIELDS = ["titre", "enonce", "body", "resume"];
+function swapLang(o) {
+  for (const k of I18N_FIELDS) if (k in o) {
+    if (!(k + "_fr" in o)) o[k + "_fr"] = o[k];
+    o[k] = LANG === "en" && o[k + "_en"] ? o[k + "_en"] : o[k + "_fr"];
+  }
+}
+function applyData() {
+  DATA.elements.forEach(swapLang);
+  (DATA.partie_docs || []).forEach(swapLang);
+  DATA.documents.forEach(swapLang);
+  for (const p of DATA.partie_docs || []) DATA.parties[p.id] = p.titre;
+}
+applyData();
+
 // ---------- Modèle ----------
 const TYPES = ["definition", "spinoza", "marx", "these", "refutee"];
-const TYPE_LABEL = { definition: "Concepts", spinoza: "Prémisses de Spinoza", marx: "Prémisses de Marx", these: "Thèses", refutee: "Positions réfutées", manquant: "Manquant" };
-const TYPE_SING = { definition: "Concept", spinoza: "Prémisse de Spinoza", marx: "Prémisse de Marx", these: "Thèse", refutee: "Position réfutée", manquant: "Référence manquante" };
+let TYPE_LABEL, TYPE_SING, STATUT_LABEL;
+function setLabels() {
+  TYPE_LABEL = tr({ definition: "Concepts", spinoza: "Prémisses de Spinoza", marx: "Prémisses de Marx", these: "Thèses", refutee: "Positions réfutées", manquant: "Manquant" },
+                  { definition: "Concepts", spinoza: "Spinoza premises", marx: "Marx premises", these: "Theses", refutee: "Refuted positions", manquant: "Missing" });
+  TYPE_SING = tr({ definition: "Concept", spinoza: "Prémisse de Spinoza", marx: "Prémisse de Marx", these: "Thèse", refutee: "Position réfutée", manquant: "Référence manquante" },
+                 { definition: "Concept", spinoza: "Spinoza premise", marx: "Marx premise", these: "Thesis", refutee: "Refuted position", manquant: "Missing reference" });
+  STATUT_LABEL = tr({ brouillon: "brouillon", "verifie-texte": "vérifié sur le texte" }, { brouillon: "draft", "verifie-texte": "checked against the text" });
+}
+setLabels();
 const STATUTS = ["brouillon", "verifie-texte"];
 const STATUT_COLOR = { brouillon: "var(--muted)", "verifie-texte": "var(--ok)" };
 const SPINOZA_URL = "https://treillis.qpetit.com/spinoza/#";
-const partLabel = p => p === "P" ? "Prémisses" : p === "0" ? "Avant-propos" : "Chapitre " + p;
+const partLabel = p => p === "P" ? tr("Prémisses", "Premises") : p === "0" ? tr("Avant-propos", "Foreword") : tr("Chapitre ", "Chapter ") + p;
 const SECTIONS = DATA.sections || {};
 const locOne = l => { const m = String(l).match(/^(\d\d)\.(\d+)$/); return m && SECTIONS[m[1]] ? `« ${SECTIONS[m[1]].titre} », ¶ ${m[2]}` : String(l); };
 const pagesTxt = e => e.loc.join(" – ");
@@ -290,7 +340,7 @@ const idSort = (a, b) => a.localeCompare(b, "fr", { numeric: true });
 function pill(id, withTitle = false) {
   const e = byId.get(id);
   if (id.startsWith("doc:")) return `<a class="pill" style="--c:var(--muted)" href="#${esc(id)}">${esc(id.slice(4))}</a>`;
-  return `<a class="pill ${e ? "" : "missing"}" style="--c:${color(id)}" href="#${esc(id)}" title="${esc(e ? e.titre + " — " + e.enonce : "Référence vers un élément inexistant")}">${esc(id)}${withTitle && e ? `<span class="pt">${esc(e.titre)}</span>` : ""}</a>`;
+  return `<a class="pill ${e ? "" : "missing"}" style="--c:${color(id)}" href="#${esc(id)}" title="${esc(e ? e.titre + " — " + e.enonce : tr("Référence vers un élément inexistant", "Reference to a missing element"))}">${esc(id)}${withTitle && e ? `<span class="pt">${esc(e.titre)}</span>` : ""}</a>`;
 }
 
 // ---------- Markdown minimal ----------
@@ -374,7 +424,7 @@ function linkify(root) {
         a.className = "ref"; a.href = "#" + r; a.textContent = id;
         a.style.setProperty("--c", color(r)); a.title = byId.get(r).titre + " — " + byId.get(r).enonce;
         frag.append(a);
-      } else { const s = document.createElement("span"); s.className = "ref missing"; s.textContent = id; s.title = "Élément inexistant"; frag.append(s); }
+      } else { const s = document.createElement("span"); s.className = "ref missing"; s.textContent = id; s.title = tr("Élément inexistant", "Missing element"); frag.append(s); }
       last = off + m.length;
     });
     frag.append(n.nodeValue.slice(last));
@@ -408,43 +458,43 @@ function audit() {
     path.pop(); color0.set(v, 2);
   };
   for (const e of els) if (!color0.get(e.id)) dfs(e.id, []);
-  add("Cycles de dépendances", "err", "AGENT.md § 2.2 : aucune dépendance circulaire.", cycles.map(c => c.map(x => pill(x)).join(" → ")));
+  add(tr("Cycles de dépendances", "Dependency cycles"), "err", tr("AGENT.md § 2.2 : aucune dépendance circulaire.", "AGENT.md § 2.2: no circular dependency."), cycles.map(c => c.map(x => pill(x)).join(" → ")));
   // 2. Références manquantes
-  add("Dépendances vers un élément inexistant", "err", "depends_on cite un identifiant sans fichier.",
-    els.flatMap(e => e.depends_on.filter(d => !byId.has(resolve(d))).map(d => `${pill(e.id)} dépend de <b>${esc(d)}</b>`)));
+  add(tr("Dépendances vers un élément inexistant", "Dependencies on a missing element"), "err", tr("depends_on cite un identifiant sans fichier.", "depends_on names an id with no file."),
+    els.flatMap(e => e.depends_on.filter(d => !byId.has(resolve(d))).map(d => `${pill(e.id)} ${tr("dépend de", "depends on")} <b>${esc(d)}</b>`)));
   // 3. Démonstration ≠ depends_on
   const demo = [];
   for (const e of els) if (e.sections.includes("Démonstration") || e.sections.includes("Argumentation")) {
     const deps = new Set(e.depends_on), refs = new Set(e.demo_refs.filter(r => r !== e.id && !e.contre.includes(r)));
     const notDeclared = [...refs].filter(r => !deps.has(r)), notUsed = [...deps].filter(d => !refs.has(d));
-    if (notDeclared.length) demo.push(`${pill(e.id)} invoque sans déclarer : ${notDeclared.map(x => pill(x)).join("")}`);
-    if (notUsed.length) demo.push(`${pill(e.id)} déclare sans invoquer : ${notUsed.map(x => pill(x)).join("")}`);
+    if (notDeclared.length) demo.push(`${pill(e.id)} ${tr("invoque sans déclarer :", "invokes without declaring:")} ${notDeclared.map(x => pill(x)).join("")}`);
+    if (notUsed.length) demo.push(`${pill(e.id)} ${tr("déclare sans invoquer :", "declares without invoking:")} ${notUsed.map(x => pill(x)).join("")}`);
   }
-  add("Démonstration ≠ depends_on", "err", "AGENT.md § 5 : depends_on doit correspondre exactement aux éléments invoqués dans la démonstration ou l'argumentation.", demo);
+  add(tr("Démonstration ≠ depends_on", "Demonstration ≠ depends_on"), "err", tr("AGENT.md § 5 : depends_on doit correspondre exactement aux éléments invoqués dans la démonstration ou l'argumentation.", "AGENT.md § 5: depends_on must match exactly the elements invoked in the demonstration or argument."), demo);
   // 4. Concepts, prémisses et positions réfutées ne s'appuient pas sur des thèses
-  add("Dépendances interdites", "warn", "AGENT.md § 3 : concepts, prémisses et positions réfutées ne s'appuient que sur des concepts ou des prémisses ; seules les thèses s'appuient sur des thèses.",
+  add(tr("Dépendances interdites", "Forbidden dependencies"), "warn", tr("AGENT.md § 3 : concepts, prémisses et positions réfutées ne s'appuient que sur des concepts ou des prémisses ; seules les thèses s'appuient sur des thèses.", "AGENT.md § 3: concepts, premises and refuted positions rest only on concepts or premises; only theses rest on theses."),
     els.flatMap(e => e.type !== "these"
-      ? e.depends_on.filter(d => byId.has(resolve(d)) && ["these", "refutee"].includes(typeOf(resolve(d)))).map(d => `${pill(e.id)} (${e.type}) dépend de ${pill(resolve(d))} (${typeOf(resolve(d))})`) : []));
+      ? e.depends_on.filter(d => byId.has(resolve(d)) && ["these", "refutee"].includes(typeOf(resolve(d)))).map(d => `${pill(e.id)} (${e.type}) ${tr("dépend de", "depends on")} ${pill(resolve(d))} (${typeOf(resolve(d))})`) : []));
   // 5. Pages
-  add("Éléments sans repère", "err", "AGENT.md § 2 : toute affirmation renvoie à un passage du livre (loc : section.paragraphe).",
+  add(tr("Éléments sans repère", "Elements without a locator"), "err", tr("AGENT.md § 2 : toute affirmation renvoie à un passage du livre (loc : section.paragraphe).", "AGENT.md § 2: every claim points to a passage of the book (loc: section.paragraph)."),
     els.filter(e => !e.loc.length).map(e => pill(e.id, true)));
-  add("Repères mal formés", "err", "Format attendu : 08.4 (section 08 de sections.yaml, paragraphe 4).",
+  add(tr("Repères mal formés", "Malformed locators"), "err", tr("Format attendu : 08.4 (section 08 de sections.yaml, paragraphe 4).", "Expected format: 08.4 (section 08 of sections.yaml, paragraph 4)."),
     els.flatMap(e => e.loc.filter(l => { const m = String(l).match(/^(\d\d)\.(\d+)$/); return !m || !SECTIONS[m[1]]; }).map(l => `${pill(e.id)} : « ${esc(l)} »`)));
   // 6. Citations trop longues
-  add("Citations trop longues", "err", "AGENT.md § 6 : une citation tient en une ou deux phrases (300 caractères au plus).",
-    els.filter(e => e.citation.length > 300).map(e => `${pill(e.id)} : ${e.citation.length} caractères`));
+  add(tr("Citations trop longues", "Quotations too long"), "err", tr("AGENT.md § 6 : une citation tient en une ou deux phrases (300 caractères au plus).", "AGENT.md § 6: a quotation is one or two sentences (300 characters at most)."),
+    els.filter(e => e.citation.length > 300).map(e => `${pill(e.id)} : ${e.citation.length} ${tr("caractères", "characters")}`));
   // 7. Renvois à l'Éthique
-  add("Prémisses de Spinoza sans renvoi", "err", "AGENT.md § 3 : une prémisse S renvoie à l'Éthique (champ ethique, ex. 3p6) ou à une autre œuvre (champ ref, ex. Traité politique, III, 8).",
+  add(tr("Prémisses de Spinoza sans renvoi", "Spinoza premises without a reference"), "err", tr("AGENT.md § 3 : une prémisse S renvoie à l'Éthique (champ ethique, ex. 3p6) ou à une autre œuvre (champ ref, ex. Traité politique, III, 8).", "AGENT.md § 3: an S premise points to the Ethics (field ethique, e.g. 3p6) or to another work (field ref, e.g. Traité politique, III, 8)."),
     els.filter(e => e.type === "spinoza" && !e.ethique.length && !e.ref).map(e => pill(e.id, true)));
-  add("Renvois à l'Éthique mal formés", "warn", "Format attendu : identifiants de SpinozaGraph (1def3, 3p6, 3p9sc, 4p37sc2, 3ad1…).",
+  add(tr("Renvois à l'Éthique mal formés", "Malformed references to the Ethics"), "warn", tr("Format attendu : identifiants de SpinozaGraph (1def3, 3p6, 3p9sc, 4p37sc2, 3ad1…).", "Expected format: SpinozaGraph ids (1def3, 3p6, 3p9sc, 4p37sc2, 3ad1…)."),
     els.flatMap(e => e.ethique.filter(x => !/^[1-5](def\d+|ax\d+|p\d+(d|c\d*|sc\d*|csc\d*)*|ad\d+|agd|pr|post\d+|le\d+.*|appc\d+|apppr)$/.test(x)).map(x => `${pill(e.id)} : « ${esc(x)} »`)));
   // 8. Arêtes « contre »
-  add("« contre » vers autre chose qu'une position réfutée", "err", "AGENT.md § 3 : le champ contre ne vise que des éléments R.",
-    els.flatMap(e => refutes.get(e.id).filter(r => typeOf(r) !== "refutee").map(r => `${pill(e.id)} contre ${pill(r)}`)));
-  add("Positions réfutées sans thèse qui les réfute", "warn", "Une position R doit être visée par au moins une thèse (champ contre).",
+  add(tr("« contre » vers autre chose qu'une position réfutée", "“against” aimed at something other than a refuted position"), "err", tr("AGENT.md § 3 : le champ contre ne vise que des éléments R.", "AGENT.md § 3: the contre field targets only R elements."),
+    els.flatMap(e => refutes.get(e.id).filter(r => typeOf(r) !== "refutee").map(r => `${pill(e.id)} ${tr("contre", "against")} ${pill(r)}`)));
+  add(tr("Positions réfutées sans thèse qui les réfute", "Refuted positions with no thesis refuting them"), "warn", tr("Une position R doit être visée par au moins une thèse (champ contre).", "An R position must be targeted by at least one thesis (field contre)."),
     els.filter(e => e.type === "refutee" && !(refutedBy.get(e.id) || []).length).map(e => pill(e.id, true)));
   // 8 bis. Champs requis
-  add("Champs manquants ou invalides", "warn", "AGENT.md § 5 : type, statut_revision et lien_explicite (thèses) ; une thèse a une Démonstration ou une Argumentation.",
+  add(tr("Champs manquants ou invalides", "Missing or invalid fields"), "warn", tr("AGENT.md § 5 : type, statut_revision et lien_explicite (thèses) ; une thèse a une Démonstration ou une Argumentation.", "AGENT.md § 5: type, statut_revision and lien_explicite (theses); a thesis has a Démonstration or an Argumentation."),
     els.flatMap(e => [
       ...(!STATUTS.includes(e.statut_revision) ? [`${pill(e.id)} : statut_revision « ${esc(e.statut_revision ?? "vide")} »`] : []),
       ...(!TYPES.includes(e.type) ? [`${pill(e.id)} : type « ${esc(e.type)} »`] : []),
@@ -454,28 +504,40 @@ function audit() {
     ]));
   // 9. INDEX ↔ fichiers
   const idx = new Set(DATA.index_ids);
-  add("Cohérence INDEX.md ↔ fichiers", "warn", "AGENT.md § 4 : INDEX.md mis à jour à chaque ajout, modification ou retrait.", [
+  add(tr("Cohérence INDEX.md ↔ fichiers", "INDEX.md ↔ files consistency"), "warn", tr("AGENT.md § 4 : INDEX.md mis à jour à chaque ajout, modification ou retrait.", "AGENT.md § 4: INDEX.md is updated on every addition, change or removal."), [
     // Un corollaire (A10-C1) est rédigé dans le fichier de son parent (AGENT.md § 3) : il n'a pas de fichier propre.
-    ...DATA.index_ids.filter(i => !byId.has(i) && !els.some(e => e.corollaires.includes(i))).map(i => `<b>${esc(i)}</b> listé dans INDEX.md sans fichier ni déclaration dans un fichier parent`),
-    ...els.filter(e => !idx.has(e.id)).map(e => `${pill(e.id)} absent de INDEX.md`),
+    ...DATA.index_ids.filter(i => !byId.has(i) && !els.some(e => e.corollaires.includes(i))).map(i => `<b>${esc(i)}</b> ${tr("listé dans INDEX.md sans fichier ni déclaration dans un fichier parent", "listed in INDEX.md with no file and no declaration in a parent file")}`),
+    ...els.filter(e => !idx.has(e.id)).map(e => `${pill(e.id)} ${tr("absent de INDEX.md", "missing from INDEX.md")}`),
   ]);
   // 10. Prémisses et concepts inutilisés
-  add("Concepts et prémisses que rien ne mobilise", "info", "Un concept ou une prémisse sans dépendant est peut-être superflu.",
+  add(tr("Concepts et prémisses que rien ne mobilise", "Concepts and premises nothing uses"), "info", tr("Un concept ou une prémisse sans dépendant est peut-être superflu.", "A concept or premise with no dependent may be superfluous."),
     els.filter(e => ["definition", "spinoza", "marx"].includes(e.type) && !children.get(e.id).length).map(e => pill(e.id, true)));
   // 11. Liens reconstruits
-  add("Thèses à lien reconstruit", "info", "lien_explicite: false — la dépendance n'est pas faite par Lordon lui-même ; à relire contre le texte.",
+  add(tr("Thèses à lien reconstruit", "Theses with reconstructed links"), "info", tr("lien_explicite: false — la dépendance n'est pas faite par Lordon lui-même ; à relire contre le texte.", "lien_explicite: false — Lordon does not make the link himself; to be checked against the text."),
     els.filter(e => e.lien_explicite === false).map(e => pill(e.id, true)));
   // 12. Mentions hors depends_on
-  add("Mentions dans le texte hors depends_on", "info", "Identifiants cités dans le corps mais non déclarés comme dépendances (renvois, anticipations…). À relire, pas forcément une erreur.",
-    els.flatMap(e => { const x = e.mentions.map(resolve).filter(m => m !== e.id && !e.depends_on.includes(m)); return x.length ? [`${pill(e.id)} mentionne ${[...new Set(x)].map(y => pill(y)).join("")}`] : []; }));
+  add(tr("Mentions dans le texte hors depends_on", "Mentions in the text outside depends_on"), "info", tr("Identifiants cités dans le corps mais non déclarés comme dépendances (renvois, anticipations…). À relire, pas forcément une erreur.", "Ids cited in the body but not declared as dependencies (cross-references, anticipations…). To be reread, not necessarily an error."),
+    els.flatMap(e => { const x = e.mentions.map(resolve).filter(m => m !== e.id && !e.depends_on.includes(m)); return x.length ? [`${pill(e.id)} ${tr("mentionne", "mentions")} ${[...new Set(x)].map(y => pill(y)).join("")}`] : []; }));
+  // 12 bis. Version anglaise
+  add(tr("Traduction anglaise manquante ou incomplète", "Missing or incomplete English translation"), "warn", tr("Chaque élément a titre_en, enonce_en et un corps anglais après <!-- en -->, qui invoque les mêmes éléments que le corps français.", "Each element has titre_en, enonce_en and an English body after <!-- en -->, invoking the same elements as the French body."),
+    els.flatMap(e => {
+      const miss = [!e.titre_en && "titre_en", !e.enonce_en && "enonce_en", !e.body_en && "body_en"].filter(Boolean);
+      if (miss.length) return [`${pill(e.id)} : ${miss.join(", ")}`];
+      const fr = e.demo_refs.join(" "), en = e.demo_refs_en.join(" ");
+      return fr !== en ? [`${pill(e.id)} : ${tr("renvois", "references")} ${esc(fr)} ≠ ${esc(en)}`] : [];
+    }));
   // 13. Problèmes de lecture
-  add("Fichiers illisibles", "err", "Front-matter absent ou YAML invalide.", DATA.problems.map(p => `<code>${esc(p.file)}</code> : ${esc(p.msg)}`));
+  add(tr("Fichiers illisibles", "Unreadable files"), "err", tr("Front-matter absent ou YAML invalide.", "Missing front matter or invalid YAML."), DATA.problems.map(p => `<code>${esc(p.file)}</code> : ${esc(p.msg)}`));
   return R;
 }
-const AUDIT = audit();
-const auditErrors = AUDIT.filter(a => a.level === "err").reduce((n, a) => n + a.items.length, 0);
-const errorsById = new Map();
-for (const a of AUDIT) if (a.level !== "info") for (const it of a.items) { const m = it.match(/href="#([^"]+)"/); if (m) errorsById.set(m[1], (errorsById.get(m[1]) || 0) + 1); }
+let AUDIT, auditErrors, errorsById;
+function runAudit() {
+  AUDIT = audit();
+  auditErrors = AUDIT.filter(a => a.level === "err").reduce((n, a) => n + a.items.length, 0);
+  errorsById = new Map();
+  for (const a of AUDIT) if (a.level !== "info") for (const it of a.items) { const m = it.match(/href="#([^"]+)"/); if (m) errorsById.set(m[1], (errorsById.get(m[1]) || 0) + 1); }
+}
+runAudit();
 
 // ---------- Barre latérale ----------
 function matches(e) {
@@ -496,12 +558,12 @@ function renderFilters() {
   const f = $("#filters");
   const presentP = PARTIES.filter(p => els.some(e => e.partie === p));
   const allP = presentP.every(p => state.parties.has(p));
-  f.innerHTML = (presentP.length ? `<div class="seg">${[`<button data-partie="all" class="${allP ? "on" : ""}" title="Toutes les parties">Tout</button>`,
-      ...presentP.map(p => `<button data-partie="${p}" class="${!allP && state.parties.has(p) ? "on" : ""}" title="${esc(partLabel(p) + " — " + DATA.parties[p] + "\nClic : seulement cette partie (re-clic : toutes) · Ctrl+clic : ajouter ou retirer")}">${p}</button>`)].join("")}</div>` : "")
+  f.innerHTML = (presentP.length ? `<div class="seg">${[`<button data-partie="all" class="${allP ? "on" : ""}" title="${tr("Toutes les parties", "All parts")}">${tr("Tout", "All")}</button>`,
+      ...presentP.map(p => `<button data-partie="${p}" class="${!allP && state.parties.has(p) ? "on" : ""}" title="${esc(partLabel(p) + " — " + DATA.parties[p] + "\n" + PART_HINT())}">${p}</button>`)].join("")}</div>` : "")
     + TYPES.filter(t => els.some(e => e.type === t)).map(t =>
     `<button class="chip ${state.types.has(t) ? "on" : ""}" data-type="${t}"><span class="dot" style="background:var(--${t})"></span>${TYPE_LABEL[t]}</button>`).join("")
     + STATUTS.filter(s => els.some(e => e.statut_revision === s)).map(s =>
-    `<button class="chip ${state.statuts.has(s) ? "on" : ""}" data-statut="${s}"><span class="dot" style="background:${STATUT_COLOR[s]}"></span>${s}</button>`).join("");
+    `<button class="chip ${state.statuts.has(s) ? "on" : ""}" data-statut="${s}"><span class="dot" style="background:${STATUT_COLOR[s]}"></span>${STATUT_LABEL[s]}</button>`).join("");
   f.onclick = ev => {
     const b = ev.target.closest(".chip, .seg button"); if (!b) return;
     if (b.dataset.partie) return setParts(b.dataset.partie, ev.ctrlKey || ev.metaKey);
@@ -510,6 +572,7 @@ function renderFilters() {
     renderFilters(); renderList(); renderGraph(true);
   };
 }
+const PART_HINT = () => tr("Clic : seulement cette partie (re-clic : toutes) · Ctrl+clic : ajouter ou retirer", "Click: this part only (click again: all) · Ctrl+click: add or remove");
 // Clic : seulement cette partie (re-clic : toutes) ; Ctrl+clic : ajouter ou retirer (comme SpinozaGraph).
 function setParts(v, add) {
   const all = [...PARTIES, ""];
@@ -523,30 +586,30 @@ function setParts(v, add) {
   if (only.length === 1 && state.parties.size <= 2 && PARTIES.includes(only[0])) go("partie:" + only[0]);
 }
 function renderList() {
-  let h = `<button class="item ${state.view === "home" ? "sel" : ""}" data-go="home"><span class="t">Vue d'ensemble</span></button>`;
-  h += `<button class="item ${state.view === "doc:PARCOURS.md" ? "sel" : ""}" data-go="doc:PARCOURS.md"><span class="t">Parcours de lecture</span></button>`;
-  h += `<button class="item ${state.view === "alpha" ? "sel" : ""}" data-go="alpha"><span class="t">Figure : l'angle α</span></button>`;
-  h += `<button class="item ${state.view === "regimes" ? "sel" : ""}" data-go="regimes"><span class="t">Les régimes d'affects</span></button>`;
+  let h = `<button class="item ${state.view === "home" ? "sel" : ""}" data-go="home"><span class="t">${tr("Vue d'ensemble", "Overview")}</span></button>`;
+  h += `<button class="item ${state.view === "doc:PARCOURS.md" ? "sel" : ""}" data-go="doc:PARCOURS.md"><span class="t">${tr("Parcours de lecture", "Reading path")}</span></button>`;
+  h += `<button class="item ${state.view === "alpha" ? "sel" : ""}" data-go="alpha"><span class="t">${tr("Figure : l'angle α", "Figure: the angle α")}</span></button>`;
+  h += `<button class="item ${state.view === "regimes" ? "sel" : ""}" data-go="regimes"><span class="t">${tr("Les régimes d'affects", "Regimes of affects")}</span></button>`;
   h += `<button class="item ${state.view === "audit" ? "sel" : ""}" data-go="audit"><span class="t">Audit</span>${auditErrors ? `<span class="badge-err">● ${auditErrors}</span>` : ""}</button>`;
   const partOf = e => PARTIES.includes(e.partie) ? e.partie : "";
   for (const p of [...PARTIES, ""]) {
    if (!state.parties.has(p)) continue;
    const inPart = els.filter(e => partOf(e) === p);
    if (!inPart.length) continue;
-   if (PARTIES.length) h += `<div class="group" style="font-weight:700">${p ? (DATA.parties[p] === partLabel(p) ? esc(partLabel(p)) : `${partLabel(p)}. ${esc(DATA.parties[p])}`) : "Sans partie"}</div>`;
+   if (PARTIES.length) h += `<div class="group" style="font-weight:700">${p ? (DATA.parties[p] === partLabel(p) ? esc(partLabel(p)) : `${partLabel(p)}. ${esc(DATA.parties[p])}`) : tr("Sans partie", "No part")}</div>`;
    for (const t of TYPES) {
     const rows = inPart.filter(e => e.type === t).map(e => [e, matches(e)]).filter(([, m]) => m).sort((a, b) => idSort(a[0].id, b[0].id));
     if (!rows.length) continue;
     h += `<div class="group">${TYPE_LABEL[t]} · ${rows.length}</div>`;
     for (const [e, m] of rows) h += `<button class="item ${state.sel === e.id && state.view === "el" ? "sel" : ""}" data-go="${e.id}">
       <span class="id" style="color:var(--${t})">${hlText(e.id)}</span><span class="t">${hlText(e.titre)}</span>
-      ${errorsById.get(e.id) ? `<span class="badge-err" title="Signalé par l'audit">●</span>` : ""}
+      ${errorsById.get(e.id) ? `<span class="badge-err" title="${tr("Signalé par l'audit", "Flagged by the audit")}">●</span>` : ""}
       ${m.snip ? `<span class="snip">…${hlText(m.snip)}…</span>` : ""}</button>`;
    }
   }
   const docs = DATA.documents.filter(d => !state.q || fold(d.name + " " + d.body).includes(fold(state.q)));
   if (docs.length) {
-    h += `<div class="group">Documents · ${docs.length}</div>`;
+    h += `<div class="group">${tr("Documents", "Documents")} · ${docs.length}</div>`;
     for (const d of docs) h += `<button class="item ${state.view === "doc:" + d.name ? "sel" : ""}" data-go="doc:${esc(d.name)}"><span class="t">${esc(d.title || d.name)}</span></button>`;
   }
   $("#list").innerHTML = h;
@@ -683,10 +746,10 @@ function renderGraph(refit = false) {
     g.append(svgEl("rect", { width: NW, height: NH, rx: 7 }));
     g.append(svgEl("rect", { class: "bar", width: 5, height: NH - 2, x: 1, y: 1, rx: 3 }));
     const t1 = svgEl("text", { class: "nid", x: 14, y: 19 }); t1.textContent = id; g.append(t1);
-    const t2 = svgEl("text", { x: 14, y: 36 }); t2.textContent = e ? truncate(e.titre, 24) : "élément manquant"; g.append(t2);
+    const t2 = svgEl("text", { x: 14, y: 36 }); t2.textContent = e ? truncate(e.titre, 24) : tr("élément manquant", "missing element"); g.append(t2);
     if (e) g.append(svgEl("circle", { class: "status", cx: NW - 12, cy: 14, r: 5, fill: STATUT_COLOR[e.statut_revision] || "var(--err)" }));
     if (errorsById.get(id)) { const w = svgEl("text", { x: NW - 26, y: 18, fill: "var(--err)", "font-size": 13 }); w.textContent = "!"; g.append(w); }
-    const tip = svgEl("title"); tip.textContent = e ? `${id} — ${e.titre}\n\n${e.enonce}\n\nStatut : ${e.statut_revision}` : `${id} : référencé mais inexistant`; g.append(tip);
+    const tip = svgEl("title"); tip.textContent = e ? `${id} — ${e.titre}\n\n${e.enonce}\n\n${tr("Statut", "Status")} : ${STATUT_LABEL[e.statut_revision] || e.statut_revision}` : `${id} : ${tr("référencé mais inexistant", "referenced but missing")}`; g.append(tip);
     gN.append(g);
   }
   if (refit) fit();
@@ -700,8 +763,8 @@ function renderGutter() {
   $("#gutter").innerHTML = (layout.bands || []).map(b => {
     const top = Math.max(b.y * z.k + z.y, 2), bottom = Math.min((b.y + b.h) * z.k + z.y, H - 2);
     if (bottom - top < 14) return "";
-    const title = b.p ? DATA.parties[b.p] : "Sans partie";
-    return `<div class="glabel" data-partie="${b.p}" style="top:${top}px;height:${bottom - top}px" title="${esc((b.p ? partLabel(b.p) + " — " : "") + title + "\nClic : seulement cette partie (re-clic : toutes) · Ctrl+clic : ajouter ou retirer")}"><span><b>${esc(b.p || "—")}</b>${bottom - top > 40 ? ` <i>${esc(title)}</i>` : ""}</span></div>`;
+    const title = b.p ? DATA.parties[b.p] : tr("Sans partie", "No part");
+    return `<div class="glabel" data-partie="${b.p}" style="top:${top}px;height:${bottom - top}px" title="${esc((b.p ? partLabel(b.p) + " — " : "") + title + "\n" + PART_HINT())}"><span><b>${esc(b.p || "—")}</b>${bottom - top > 40 ? ` <i>${esc(title)}</i>` : ""}</span></div>`;
   }).join("");
 }
 $("#gutter").onclick = ev => { const g = ev.target.closest("[data-partie]"); if (g) setParts(g.dataset.partie, ev.ctrlKey || ev.metaKey); };
@@ -761,9 +824,12 @@ $("#toolbar").onclick = ev => {
 };
 $("#fit").onclick = fit;
 $("#read").onclick = () => { $("#main").classList.toggle("reading"); if (!$("#main").classList.contains("reading")) fit(); };
-$("#legend").innerHTML = [...TYPES.filter(t => els.some(e => e.type === t)), ...(missing.size ? ["manquant"] : [])]
-  .map(t => `<span style="--c:var(--${t})">${TYPE_LABEL[t]}</span>`).join("")
-  + `<span class="dash" style="--c:var(--refutee)">contre</span><span style="--c:var(--accent)">appuis</span><span style="--c:var(--these)">conséquences</span><span class="dash" style="--c:var(--muted)" title="Appui pris dans une autre partie : visible pour l'élément sélectionné et dans les modes Chemin vers, Conséquences, Voisinage">autre partie</span>`;
+function renderLegend() {
+  $("#legend").innerHTML = [...TYPES.filter(t => els.some(e => e.type === t)), ...(missing.size ? ["manquant"] : [])]
+    .map(t => `<span style="--c:var(--${t})">${TYPE_LABEL[t]}</span>`).join("")
+    + tr(`<span class="dash" style="--c:var(--refutee)">contre</span><span style="--c:var(--accent)">appuis</span><span style="--c:var(--these)">conséquences</span><span class="dash" style="--c:var(--muted)" title="Appui pris dans une autre partie : visible pour l'élément sélectionné et dans les modes Chemin vers, Conséquences, Voisinage">autre partie</span>`,
+         `<span class="dash" style="--c:var(--refutee)">against</span><span style="--c:var(--accent)">grounds</span><span style="--c:var(--these)">consequences</span><span class="dash" style="--c:var(--muted)" title="Ground taken from another part: shown for the selected element and in the Path to, Consequences and Neighbours modes">other part</span>`);
+}
 (() => {
   const rz = $("#resizer"); let on = false;
   rz.addEventListener("pointerdown", ev => { on = true; rz.setPointerCapture(ev.pointerId); });
@@ -781,9 +847,9 @@ function renderElement(id) {
   const e = byId.get(id);
   const inner = $("#readerInner");
   if (!e) {
-    inner.innerHTML = `<h1 class="title" style="--c:var(--err)"><span class="eid">${esc(id)}</span>Élément manquant</h1>
-      <p>Cet identifiant est cité comme dépendance mais aucun fichier ne le définit.</p>
-      <div class="rel"><span class="k">Cité par</span><span>${(children.get(id) || []).map(x => pill(x, true)).join("")}</span></div>`;
+    inner.innerHTML = `<h1 class="title" style="--c:var(--err)"><span class="eid">${esc(id)}</span>${tr("Élément manquant", "Missing element")}</h1>
+      <p>${tr("Cet identifiant est cité comme dépendance mais aucun fichier ne le définit.", "This id is cited as a dependency but no file defines it.")}</p>
+      <div class="rel"><span class="k">${tr("Cité par", "Cited by")}</span><span>${(children.get(id) || []).map(x => pill(x, true)).join("")}</span></div>`;
     return;
   }
   inner.style.setProperty("--c", color(id));
@@ -798,26 +864,26 @@ function renderElement(id) {
     <div class="crumbs">${PARTIES.includes(e.partie) ? `<a class="pill" style="--c:var(--muted)" href="#partie:${e.partie}" title="${esc(DATA.parties[e.partie])}">${partLabel(e.partie)}</a>` : ""}<span>${TYPE_SING[e.type] || e.type}</span>
       ${seqLinks(id)}
       <span style="margin-left:auto"></span>
-      <button data-m="anc">Chemin vers ${esc(id)}</button><button data-m="desc">Conséquences</button></div>
+      <button data-m="anc">${tr("Chemin vers", "Path to")} ${esc(id)}</button><button data-m="desc">${tr("Conséquences", "Consequences")}</button></div>
     <h1 class="title"><span class="eid">${esc(id)}</span>${esc(e.titre)}</h1>
     <div class="badges">
       <span class="badge type">${TYPE_SING[e.type] || esc(e.type)}</span>
-      <span class="badge">révision <b style="color:${STATUT_COLOR[e.statut_revision] || "var(--err)"}">${esc(e.statut_revision ?? "—")}</b></span>
+      <span class="badge">${tr("révision", "review")} <b style="color:${STATUT_COLOR[e.statut_revision] || "var(--err)"}">${esc(STATUT_LABEL[e.statut_revision] || e.statut_revision || "—")}</b></span>
       ${e.loc.length ? `<span class="badge" title="${esc(locTitle(e))}">§ <b>${esc(pagesTxt(e))}</b></span>` : ""}
-      ${e.type === "these" && typeof e.lien_explicite === "boolean" ? `<span class="badge" title="${e.lien_explicite ? "Lordon fait lui-même ces liens" : "Dépendances reconstruites pour relier ; Lordon ne les fait pas explicitement"}">liens <b>${e.lien_explicite ? "explicites" : "reconstruits"}</b></span>` : ""}
+      ${e.type === "these" && typeof e.lien_explicite === "boolean" ? `<span class="badge" title="${e.lien_explicite ? tr("Lordon fait lui-même ces liens", "Lordon makes these links himself") : tr("Dépendances reconstruites pour relier ; Lordon ne les fait pas explicitement", "Dependencies reconstructed to connect; Lordon does not make them explicitly")}">${tr("liens", "links")} <b>${e.lien_explicite ? tr("explicites", "explicit") : tr("reconstruits", "reconstructed")}</b></span>` : ""}
       ${e.ref ? `<span class="badge"><b>${esc(e.ref)}</b></span>` : ""}
-      ${e.ethique.map(x => `<a class="badge" href="${SPINOZA_URL}${encodeURIComponent(x)}" target="_blank" rel="noopener" title="Ouvrir dans l'Éthique (SpinozaGraph)">Éthique <b>${esc(x)}</b></a>`).join("")}
+      ${e.ethique.map(x => `<a class="badge" href="${SPINOZA_URL}${encodeURIComponent(x)}" target="_blank" rel="noopener" title="${tr("Ouvrir dans l'Éthique (SpinozaGraph)", "Open in the Ethics (SpinozaGraph)")}">${tr("Éthique", "Ethics")} <b>${esc(x)}</b></a>`).join("")}
     </div>
     ${e.enonce ? `<div class="enonce">${inline(e.enonce)}</div>` : ""}
-    ${e.citation ? `<div class="citation">${esc(e.citation)}<span class="pg" title="${esc(locTitle(e))}">§ ${esc(pagesTxt(e))}</span></div>` : ""}
+    ${e.citation ? `<div class="citation"${LANG === "en" ? ` title="Quotation in the original French"` : ""}>${esc(e.citation)}<span class="pg" title="${esc(locTitle(e))}">§ ${esc(pagesTxt(e))}</span></div>` : ""}
     <div class="rel">
-      <span class="k">Dépend de</span><span>${parents.get(id).map(x => pill(x, true)).join("") || "—"}</span>
-      ${chain.length > direct.size ? `<span class="k">Chemin complet</span><span><ul class="chain">${chain.map(x => `<li style="padding-left:${dd(x) * 14}px">${pill(x, true)}</li>`).join("")}</ul></span>` : ""}
-      <span class="k">Dépendants</span><span>${children.get(id).map(x => pill(x, true)).join("") || "—"}</span>
-      ${(refutes.get(id) || []).length ? `<span class="k">Contre</span><span>${refutes.get(id).map(x => pill(x, true)).join("")}</span>` : ""}
-      ${(refutedBy.get(id) || []).length ? `<span class="k">Réfutée par</span><span>${refutedBy.get(id).map(x => pill(x, true)).join("")}</span>` : ""}
-      ${extra.length ? `<span class="k">Mentionne aussi</span><span>${extra.map(x => pill(x)).join("")}</span>` : ""}
-      ${mb.length ? `<span class="k">Mentionné par</span><span>${[...new Set(mb)].map(x => pill(x)).join("")}</span>` : ""}
+      <span class="k">${tr("Dépend de", "Depends on")}</span><span>${parents.get(id).map(x => pill(x, true)).join("") || "—"}</span>
+      ${chain.length > direct.size ? `<span class="k">${tr("Chemin complet", "Full path")}</span><span><ul class="chain">${chain.map(x => `<li style="padding-left:${dd(x) * 14}px">${pill(x, true)}</li>`).join("")}</ul></span>` : ""}
+      <span class="k">${tr("Dépendants", "Dependents")}</span><span>${children.get(id).map(x => pill(x, true)).join("") || "—"}</span>
+      ${(refutes.get(id) || []).length ? `<span class="k">${tr("Contre", "Against")}</span><span>${refutes.get(id).map(x => pill(x, true)).join("")}</span>` : ""}
+      ${(refutedBy.get(id) || []).length ? `<span class="k">${tr("Réfutée par", "Refuted by")}</span><span>${refutedBy.get(id).map(x => pill(x, true)).join("")}</span>` : ""}
+      ${extra.length ? `<span class="k">${tr("Mentionne aussi", "Also mentions")}</span><span>${extra.map(x => pill(x)).join("")}</span>` : ""}
+      ${mb.length ? `<span class="k">${tr("Mentionné par", "Mentioned by")}</span><span>${[...new Set(mb)].map(x => pill(x)).join("")}</span>` : ""}
     </div>
     <div class="md" id="body">${markdown(e.body)}</div>
     <div class="file">${esc(e.file)}</div>`;
@@ -826,7 +892,7 @@ function renderElement(id) {
 }
 function seqLinks(id) {
   const e = byId.get(id), same = els.filter(x => x.type === e.type).map(x => x.id).sort(idSort), i = same.indexOf(id);
-  const a = (t, arrow) => t ? `<a href="#${esc(t)}" title="${esc(byId.get(t).titre)} (touche ${arrow === "‹" ? "[" : "]"})" style="--c:${color(t)}">${arrow === "‹" ? "‹ " + esc(t) : esc(t) + " ›"}</a>` : `<a class="off">·</a>`;
+  const a = (t, arrow) => t ? `<a href="#${esc(t)}" title="${esc(byId.get(t).titre)} (${tr("touche", "key")} ${arrow === "‹" ? "[" : "]"})" style="--c:${color(t)}">${arrow === "‹" ? "‹ " + esc(t) : esc(t) + " ›"}</a>` : `<a class="off">·</a>`;
   return `<span class="seq">${a(same[i - 1], "‹")}${a(same[i + 1], "›")}</span>`;
 }
 function stepSeq(delta) {
@@ -838,14 +904,15 @@ function stepSeq(delta) {
 function renderDoc(name) {
   const d = DATA.documents.find(x => x.name === name);
   const inner = $("#readerInner"); inner.style.removeProperty("--c");
-  if (!d) { inner.innerHTML = "<p>Document introuvable.</p>"; return; }
-  inner.innerHTML = `<div class="crumbs"><span>${d.kind === "chapitre" ? "Chapitre" : "Document du projet"}</span></div><div class="md" id="body">${markdown(d.body)}</div><div class="file">${esc(d.name)}</div>`;
+  if (!d) { inner.innerHTML = `<p>${tr("Document introuvable.", "Document not found.")}</p>`; return; }
+  const untranslated = LANG === "en" && !d.body_en ? `<p class="hint" style="color:var(--muted);font-size:13px">This project document is only available in French.</p>` : "";
+  inner.innerHTML = `<div class="crumbs"><span>${tr("Document du projet", "Project document")}</span></div>${untranslated}<div class="md" id="body">${markdown(d.body)}</div><div class="file">${esc(d.name)}</div>`;
   linkify($("#body"));
 }
 function renderPartie(p) {
   const d = (DATA.partie_docs || []).find(x => x.id === p);
   const inner = $("#readerInner"); inner.style.removeProperty("--c");
-  if (!d) { inner.innerHTML = "<p>Partie introuvable.</p>"; return; }
+  if (!d) { inner.innerHTML = `<p>${tr("Partie introuvable.", "Part not found.")}</p>`; return; }
   const mine = els.filter(e => e.partie === p);
   const st = s => mine.filter(e => e.statut_revision === s).length;
   const i = PARTIES.indexOf(p), prev = PARTIES[i - 1], next = PARTIES[i + 1];
@@ -855,26 +922,31 @@ function renderPartie(p) {
     ${d.resume ? `<div class="statement" style="--c:var(--accent)"><p>${esc(d.resume)}</p></div>` : ""}
     <div class="stats">
       ${TYPES.filter(t => mine.some(e => e.type === t)).map(t => `<div class="stat" style="--c:var(--${t})"><div class="n">${mine.filter(e => e.type === t).length}</div><div class="l">${TYPE_LABEL[t]}</div></div>`).join("")}
-      ${STATUTS.filter(s => st(s)).map(s => `<div class="stat" style="--c:${STATUT_COLOR[s]}"><div class="n">${st(s)}</div><div class="l">${s}</div></div>`).join("")}
+      ${STATUTS.filter(s => st(s)).map(s => `<div class="stat" style="--c:${STATUT_COLOR[s]}"><div class="n">${st(s)}</div><div class="l">${STATUT_LABEL[s]}</div></div>`).join("")}
     </div>
     <div class="md" id="body">${markdown(d.body)}</div>
-    <div class="md"><h2>Éléments de la partie</h2></div>
+    <div class="md"><h2>${tr("Éléments de la partie", "Elements of this part")}</h2></div>
     ${TYPES.filter(t => mine.some(e => e.type === t)).map(t => `<div class="relsec"><h4>${TYPE_LABEL[t]} · ${mine.filter(e => e.type === t).length}</h4>${mine.filter(e => e.type === t).sort((a, b) => idSort(a.id, b.id)).map(e => pill(e.id, true)).join("")}</div>`).join("")}
     <div class="file">${esc(d.file)}</div>`;
   linkify($("#body"));
 }
 function renderHome() {
   const inner = $("#readerInner"); inner.style.removeProperty("--c");
+  inner.innerHTML = `<div class="home">
+    ${LANG === "en" ? HOME_EN() : HOME_FR()}
+  </div>`;
+}
+function HOME_FR() {
   const count = t => els.filter(e => e.type === t).length;
   const st = s => els.filter(e => e.statut_revision === s).length;
-  inner.innerHTML = `<div class="home">
+  return `
     <h1 class="title"><i>Capitalisme, désir et servitude</i> en treillis</h1>
     <p class="md" style="font-size:15px">L'argument du livre de Frédéric Lordon (La Fabrique, 2010), reconstruit dans l'ordre géométrique. En haut, les prémisses que Lordon prend à Spinoza (liens vers l'<a href="https://treillis.qpetit.com/spinoza/" target="_blank" rel="noopener"><i>Éthique</i></a>) et à Marx ; en dessous, ses concepts et ses thèses, chapitre par chapitre ; en <span style="color:var(--refutee)">rouge</span>, les positions qu'il réfute. Les énoncés sont des reformulations ; chacun renvoie à son passage par section et paragraphe (§ 08.4 : section 08, ¶ 4). Les citations sont courtes.</p>
     <p class="md" style="font-size:15px">Chaque flèche va d'un appui vers ce qui s'appuie sur lui ; les pointillés rouges relient une thèse à la position qu'elle réfute. Sélectionnez un élément pour lire son texte et voir en <span style="color:var(--accent)">bleu</span> le chemin qui y mène, en <span style="color:var(--these)">orange</span> ce qui en découle.</p>
     <div class="stats">
       ${TYPES.map(t => `<div class="stat" style="--c:var(--${t})"><div class="n">${count(t)}</div><div class="l">${TYPE_LABEL[t]}</div></div>`).join("")}
       <div class="stat"><div class="n">${els.reduce((n, e) => n + parents.get(e.id).length, 0)}</div><div class="l">Dépendances</div></div>
-      ${STATUTS.map(s => `<div class="stat" style="--c:${STATUT_COLOR[s]}"><div class="n">${st(s)}</div><div class="l">${s}</div></div>`).join("")}
+      ${STATUTS.map(s => `<div class="stat" style="--c:${STATUT_COLOR[s]}"><div class="n">${st(s)}</div><div class="l">${STATUT_LABEL[s]}</div></div>`).join("")}
       <div class="stat" style="--c:var(--err)"><div class="n">${auditErrors}</div><div class="l">Erreurs d'audit</div></div>
     </div>
     <p class="md" style="font-size:15px">Pour commencer : le <a href="#doc:PARCOURS.md">parcours de lecture</a>, en seize étapes ; la figure de <a href="#alpha">l'angle α</a> ; la vue des <a href="#regimes">régimes d'affects</a>.</p>
@@ -883,8 +955,29 @@ function renderHome() {
     <div class="md"><h2>Raccourcis</h2></div>
     <p style="font-size:13px;line-height:1.9"><span class="kbd">/</span> rechercher · <span class="kbd">F</span> recadrer · <span class="kbd">R</span> mode lecture · <span class="kbd">1</span>–<span class="kbd">4</span> modes du graphe · <span class="kbd">Échap</span> désélectionner · <span class="kbd">Alt+←</span> <span class="kbd">Alt+→</span> ou <span class="kbd">⌫</span> historique · <span class="kbd">[</span> <span class="kbd">]</span> élément précédent / suivant du même type · molette : zoom · glisser : déplacer</p>
     <div class="md"><h2>Mise à jour</h2></div>
-    <p style="font-size:13px">Ce fichier est généré. Après modification des textes : <code>python outils/build_explorer.py</code> (ou <code>--watch</code> pour régénérer automatiquement), puis rechargez la page.</p>
-  </div>`;
+    <p style="font-size:13px">Ce fichier est généré. Après modification des textes : <code>python outils/build_explorer.py</code> (ou <code>--watch</code> pour régénérer automatiquement), puis rechargez la page.</p>`;
+}
+function HOME_EN() {
+  const count = t => els.filter(e => e.type === t).length;
+  const st = s => els.filter(e => e.statut_revision === s).length;
+  return `
+    <h1 class="title"><i>Capitalisme, désir et servitude</i> as a lattice</h1>
+    <p class="md" style="font-size:15px">The argument of Frédéric Lordon's book (La Fabrique, 2010; in English, <i>Willing Slaves of Capital</i>, Verso, 2014), reconstructed in geometrical order. At the top, the premises Lordon takes from Spinoza (linked to the <a href="https://treillis.qpetit.com/spinoza/" target="_blank" rel="noopener"><i>Ethics</i></a>) and from Marx; below, his concepts and theses, chapter by chapter; in <span style="color:var(--refutee)">red</span>, the positions he refutes. Statements are paraphrases; each points to its passage by section and paragraph (§ 08.4: section 08, ¶ 4). Section titles are those of the French edition.</p>
+    <p class="md" style="font-size:15px">This English version translates the reconstruction from the French; it does not use the published English translation. Lordon's words, where quoted in the texts, are our own short renderings; the highlighted quotation under each statement stays in the original French.</p>
+    <p class="md" style="font-size:15px">Each arrow runs from a ground to what rests on it; red dotted lines link a thesis to the position it refutes. Select an element to read its text and see in <span style="color:var(--accent)">blue</span> the path leading to it, in <span style="color:var(--these)">orange</span> what follows from it.</p>
+    <div class="stats">
+      ${TYPES.map(t => `<div class="stat" style="--c:var(--${t})"><div class="n">${count(t)}</div><div class="l">${TYPE_LABEL[t]}</div></div>`).join("")}
+      <div class="stat"><div class="n">${els.reduce((n, e) => n + parents.get(e.id).length, 0)}</div><div class="l">Dependencies</div></div>
+      ${STATUTS.map(s => `<div class="stat" style="--c:${STATUT_COLOR[s]}"><div class="n">${st(s)}</div><div class="l">${STATUT_LABEL[s]}</div></div>`).join("")}
+      <div class="stat" style="--c:var(--err)"><div class="n">${auditErrors}</div><div class="l">Audit errors</div></div>
+    </div>
+    <p class="md" style="font-size:15px">To begin: the <a href="#doc:PARCOURS.md">reading path</a>, in sixteen steps; the figure of <a href="#alpha">the angle α</a>; the view of the <a href="#regimes">regimes of affects</a>.</p>
+    <div class="md"><h2>Rights</h2></div>
+    <p style="font-size:13px">Frédéric Lordon's book (La Fabrique, 2010) is under copyright: this lattice paraphrases it and quotes only short passages, with their locators; it does not reproduce its text. The quotations remain with their rights holders; the rest is under CC BY-SA 4.0 (the code under GPL-3.0). Details: <a href="#doc:NOTICE.md">sources, rights and credits</a>. To read Lordon, read Lordon.</p>
+    <div class="md"><h2>Shortcuts</h2></div>
+    <p style="font-size:13px;line-height:1.9"><span class="kbd">/</span> search · <span class="kbd">F</span> fit · <span class="kbd">R</span> reading mode · <span class="kbd">1</span>–<span class="kbd">4</span> graph modes · <span class="kbd">Esc</span> deselect · <span class="kbd">Alt+←</span> <span class="kbd">Alt+→</span> or <span class="kbd">⌫</span> history · <span class="kbd">[</span> <span class="kbd">]</span> previous / next element of the same type · wheel: zoom · drag: pan</p>
+    <div class="md"><h2>Updating</h2></div>
+    <p style="font-size:13px">This file is generated. After editing the texts: <code>python outils/build_explorer.py</code> (or <code>--watch</code> to rebuild automatically), then reload the page.</p>`;
 }
 // Figure interactive : le désir-maître D, le conatus enrôlé d, l'angle α (D11, T014, D24, T043).
 let alphaDeg = 35;
@@ -892,9 +985,10 @@ function renderAlpha() {
   const inner = $("#readerInner"); inner.style.removeProperty("--c");
   const ref = id => byId.has(id) ? pill(id, true) : "";
   inner.innerHTML = `<div class="alpha">
-    <h1 class="title">L'angle α</h1>
-    <p class="md" style="font-size:15px">Le modèle vectoriel de Lordon (13.3-13.7, 14.1, 39.5). Le désir-maître est un vecteur <b>D</b> ; chaque conatus enrôlé, un vecteur <b>d</b>. Seule la composante de <b>d</b> parallèle à <b>D</b>, de longueur |d| cos α, sert le désir-maître ; la composante orthogonale, |d| sin α, lui échappe.</p>
-    <svg viewBox="-150 -180 460 240" aria-label="Décomposition du conatus enrôlé selon le désir-maître">
+    <h1 class="title">${tr("L'angle α", "The angle α")}</h1>
+    <p class="md" style="font-size:15px">${tr("Le modèle vectoriel de Lordon (13.3-13.7, 14.1, 39.5). Le désir-maître est un vecteur <b>D</b> ; chaque conatus enrôlé, un vecteur <b>d</b>. Seule la composante de <b>d</b> parallèle à <b>D</b>, de longueur |d| cos α, sert le désir-maître ; la composante orthogonale, |d| sin α, lui échappe.",
+      "Lordon's vector model (13.3-13.7, 14.1, 39.5). The master-desire is a vector <b>D</b>; each enlisted conatus, a vector <b>d</b>. Only the component of <b>d</b> parallel to <b>D</b>, of length |d| cos α, serves the master-desire; the orthogonal component, |d| sin α, escapes it.")}</p>
+    <svg viewBox="-150 -180 460 240" aria-label="${tr("Décomposition du conatus enrôlé selon le désir-maître", "Decomposition of the enlisted conatus along the master-desire")}">
       <defs>
         <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="context-stroke"/></marker>
       </defs>
@@ -911,14 +1005,14 @@ function renderAlpha() {
     </svg>
     <div class="ctl"><label for="aRange">α = <b id="aVal"></b></label><input id="aRange" type="range" min="0" max="180" step="1" value="${alphaDeg}"></div>
     <div class="ctl presets">
-      <button data-a="0">α = 0 : alignement intégral</button>
-      <button data-a="35">dérive ordinaire</button>
-      <button data-a="90">perpendiculaire</button>
+      <button data-a="0">${tr("α = 0 : alignement intégral", "α = 0: complete alignment")}</button>
+      <button data-a="35">${tr("dérive ordinaire", "ordinary drift")}</button>
+      <button data-a="90">${tr("perpendiculaire", "perpendicular")}</button>
       <button data-a="180">α = 180°</button>
     </div>
-    <div>Part captée par le désir-maître : <b id="aCos"></b><div class="bar"><i id="aBar"></i></div></div>
+    <div>${tr("Part captée par le désir-maître :", "Share captured by the master-desire:")} <b id="aCos"></b><div class="bar"><i id="aBar"></i></div></div>
     <div class="read" id="aRead"></div>
-    <div class="md"><h2>Éléments</h2></div>
+    <div class="md"><h2>${tr("Éléments", "Elements")}</h2></div>
     <div class="relsec">${["D11", "T014", "T015", "T029", "D24", "T043", "T044"].map(ref).join("")}</div>
   </div>`;
   const R = 200, set = a => {
@@ -935,7 +1029,12 @@ function renderAlpha() {
     $("#aCos").textContent = `cos α = ${c.toFixed(2)}`;
     $("#aBar").style.width = Math.max(0, c) * 100 + "%";
     $("#aBar").style.background = c < 0 ? "var(--refutee)" : "var(--these)";
-    $("#aRead").textContent =
+    $("#aRead").textContent = LANG === "en" ? (
+      a === 0 ? "α = 0: perfect collinearity. The enlisted desire lives entirely for the master-desire; this is the ideal of the neoliberal firm (14.3)." :
+      a < 90 ? "The enlisted conatus keeps a misalignment of its own, its clinamen: part of its effort serves the master-desire, the rest escapes it (14.1). Reducing α is the employer's obsession." :
+      a === 90 ? "The right angle: cos α = 0, capture is nil. Sedition is becoming orthogonal: taking not the tangent but the perpendicular (39.5)." :
+      a < 180 ? "Beyond the right angle, the conatus no longer merely escapes capture: it starts to pull against the master-desire (39.5)." :
+      "α = 180°, cos α = -1: the realignment is negative, openly antagonistic. The conatus takes traction away from the master-desire (39.5, figure 2-b).") :
       a === 0 ? "α = 0 : la colinéarité parfaite. Le désir enrôlé « vit entièrement pour le désir-maître » ; c'est l'idéal de l'entreprise néolibérale (14.3)." :
       a < 90 ? "Le conatus enrôlé garde un désalignement propre, son clinamen : une part de son effort sert le désir-maître, le reste lui échappe (14.1). Réduire α est l'idée fixe patronale." :
       a === 90 ? "L'angle droit : cos α = 0, la capture est nulle. « La sédition c'est le devenir orthogonal – prendre non pas la tangente mais la perpendiculaire » (39.5)." :
@@ -950,6 +1049,7 @@ function renderAlpha() {
 function renderRegimes() {
   const inner = $("#readerInner"); inner.style.removeProperty("--c");
   const P = ids => ids.filter(id => byId.has(id)).map(id => pill(id, true)).join("");
+  if (LANG === "en") return renderRegimesEn(P);
   inner.innerHTML = `<div class="regimes">
     <h1 class="title">Les régimes d'affects</h1>
     <p class="md" style="font-size:15px">Ce qui fait marcher les salariés, selon Lordon, se range sur deux axes (19.5)&nbsp;: l'affect naît-il de l'activité de travail elle-même (<i>intrinsèque</i>) ou d'objets extérieurs à elle (<i>extrinsèque</i>) ? Est-il triste ou joyeux ? Voir ${pill("D15", true)}.</p>
@@ -974,10 +1074,36 @@ function renderRegimes() {
   </div>`;
   linkify(inner);
 }
+function renderRegimesEn(P) {
+  const inner = $("#readerInner");
+  inner.innerHTML = `<div class="regimes">
+    <h1 class="title">Regimes of affects</h1>
+    <p class="md" style="font-size:15px">What makes employees work, according to Lordon, falls along two axes (19.5): does the affect arise from the work activity itself (<i>intrinsic</i>) or from objects external to it (<i>extrinsic</i>)? Is it sad or joyful? See ${pill("D15", true)}.</p>
+    <table class="grid">
+      <tr><th></th><th>sad</th><th>joyful</th></tr>
+      <tr><th>intrinsic</th>
+        <td class="sad"><b>The goad of hunger</b>Working so as not to waste away: the desire to avoid an evil, bare life (13.1, 19.5).<br>${P(["D07", "T006", "T007"])}</td>
+        <td class="joy"><b>Intrinsic joyful affects</b>Desiring work for its own sake: “fulfilment”, “self-realisation” (19.5, 21.1).<br>${P(["T021", "T024", "T026", "T027", "T028"])}</td></tr>
+      <tr><th>extrinsic</th>
+        <td class="empty">Lordon does not name this cell.</td>
+        <td class="joy"><b>Consumerist joy</b>The goods the wage can buy: commodity alienation (12.2-12.4, 19.5).<br>${P(["T013"])}</td></tr>
+    </table>
+    <div class="md"><h2>Three successive regimes</h2></div>
+    <ol class="timeline">
+      <li style="--c:var(--refutee)"><b>Marx's regime</b>: the goad of hunger works the basic desire down to the bone (13.1). ${P(["T007"])}</li>
+      <li style="--c:var(--these)"><b>The Fordist regime</b>: joyful commodity alienation and wider access to consumption are added to hunger (13.1, 19.4). ${P(["T013", "T015"])}</li>
+      <li style="--c:var(--accent)"><b>The neoliberal regime</b>: the firm wants α = 0 and takes charge of producing desires; it adds intrinsic joyful affects (19.4-19.5), without ever erasing the background of fear (31.1). ${P(["T020", "T021", "T016", "T034"])}</li>
+    </ol>
+    <div class="md"><h2>What the difference does not change</h2></div>
+    <p class="md" style="font-size:15px">Sad or joyful, one is equally determined: “constraint” and “consent” are only the names of sadness and joy in situations of power (21.4, 28.3), and “hard” and “soft” domination differ only in their affects (33.3). But to be chained and content is not the same as to be chained and sad (21.4): not all passional regimes are equal (43.2).</p>
+    <div class="relsec">${P(["T025", "T035", "T049"])}</div>
+  </div>`;
+  linkify(inner);
+}
 function renderAudit() {
   const inner = $("#readerInner"); inner.style.removeProperty("--c");
-  inner.innerHTML = `<div class="audit"><h1 class="title">Audit automatique</h1>
-    <p class="hint">Contrôles mécaniques (AGENT.md § 8). Ils ne remplacent pas l'audit de fidélité : chaque élément relu contre le passage cité.</p>
+  inner.innerHTML = `<div class="audit"><h1 class="title">${tr("Audit automatique", "Automatic audit")}</h1>
+    <p class="hint">${tr("Contrôles mécaniques (AGENT.md § 8). Ils ne remplacent pas l'audit de fidélité : chaque élément relu contre le passage cité.", "Mechanical checks (AGENT.md § 8). They do not replace the fidelity audit: each element reread against the passage cited.")}</p>
     ${AUDIT.map(a => `<h3>${esc(a.title)} <span class="count ${a.items.length ? a.level : "ok"}">${a.items.length || "✓"}</span></h3>
       <p class="hint">${esc(a.hint)}</p>${a.items.length ? `<ul>${a.items.map(i => `<li>${i}</li>`).join("")}</ul>` : ""}`).join("")}</div>`;
 }
@@ -999,13 +1125,13 @@ function track(h) {
   renderTrail();
 }
 function label(h) {
-  if (h === "home") return { t: "Vue d'ensemble" };
+  if (h === "home") return { t: tr("Vue d'ensemble", "Overview") };
   if (h === "audit") return { t: "Audit" };
-  if (h === "alpha") return { t: "L'angle α" };
-  if (h === "regimes") return { t: "Les régimes d'affects" };
+  if (h === "alpha") return { t: tr("L'angle α", "The angle α") };
+  if (h === "regimes") return { t: tr("Les régimes d'affects", "Regimes of affects") };
   if (h.startsWith("doc:")) return { t: h.slice(4) };
   if (h.startsWith("partie:")) return { t: partLabel(h.slice(7)) };
-  return { id: h, t: byId.get(h)?.titre || "manquant", c: color(h) };
+  return { id: h, t: byId.get(h)?.titre || tr("manquant", "missing"), c: color(h) };
 }
 function renderTrail() {
   $("#back").disabled = hist.i <= 0;
@@ -1016,7 +1142,7 @@ function renderTrail() {
     const L = label(hist.stack[k]), cur = k === hist.i;
     steps.push(`<button class="step ${cur ? "cur" : ""} ${k > hist.i ? "fwd" : ""}" data-k="${k}" ${L.c ? `style="--c:${L.c}"` : ""} title="${esc((L.id ? L.id + " — " : "") + L.t)}">${L.id ? esc(L.id) + (cur ? `<span class="tt">${esc(L.t)}</span>` : "") : esc(L.t)}</button>`);
   }
-  $("#trail").innerHTML = hist.stack.length > 1 ? `<span class="lbl">${from > 0 ? "… " : ""}Historique</span>` + steps.join(`<span class="arrow">›</span>`) : "";
+  $("#trail").innerHTML = hist.stack.length > 1 ? `<span class="lbl">${from > 0 ? "… " : ""}${tr("Historique", "History")}</span>` + steps.join(`<span class="arrow">›</span>`) : "";
 }
 // Aller à une page : si c'est la page précédente (ou suivante) de l'historique,
 // s'y déplacer au lieu de créer une nouvelle entrée.
@@ -1042,6 +1168,13 @@ function route() {
   const h = decodeURIComponent(location.hash.slice(1)) || "home";
   track(h);
   const prevSel = state.sel;
+  renderView(h);
+  $("#reader").scrollTop = 0;
+  renderList();
+  renderGraph(state.mode !== "all" && prevSel !== state.sel);
+  document.querySelector("#list .sel")?.scrollIntoView({ block: "nearest" });
+}
+function renderView(h) {
   if (h === "home") { state.view = "home"; state.sel = null; renderHome(); }
   else if (h === "audit") { state.view = "audit"; state.sel = null; renderAudit(); }
   else if (h === "alpha") { state.view = "alpha"; state.sel = null; renderAlpha(); }
@@ -1049,10 +1182,6 @@ function route() {
   else if (h.startsWith("doc:")) { state.view = "doc:" + h.slice(4); state.sel = null; renderDoc(h.slice(4)); }
   else if (h.startsWith("partie:")) { state.view = h; state.sel = null; renderPartie(h.slice(7)); }
   else { state.view = "el"; state.sel = h; renderElement(h); }
-  $("#reader").scrollTop = 0;
-  renderList();
-  renderGraph(state.mode !== "all" && prevSel !== state.sel);
-  document.querySelector("#list .sel")?.scrollIntoView({ block: "nearest" });
 }
 window.addEventListener("hashchange", route);
 window.addEventListener("resize", () => fit());
@@ -1069,7 +1198,37 @@ document.addEventListener("keydown", ev => {
   else if ("1234".includes(ev.key)) document.querySelectorAll("#toolbar [data-mode]")[+ev.key - 1].click();
 });
 
-$("#meta").textContent = `${els.length} éléments · généré le ${DATA.generated}`;
+// Textes fixes de l'interface, et bascule de langue.
+function applyStatic() {
+  document.documentElement.lang = LANG;
+  document.title = tr("Capitalisme, désir et servitude — treillis", "Capitalisme, désir et servitude (Willing Slaves of Capital) — lattice");
+  $("#back").title = tr("Précédent (Alt+←)", "Back (Alt+←)");
+  $("#fwd").title = tr("Suivant (Alt+→)", "Forward (Alt+→)");
+  $("#search").placeholder = tr("Rechercher (id, titre, texte) — touche /", "Search (id, title, text) — key /");
+  const modes = { all: ["Tout", "All", "Tout le graphe ; la sélection met en évidence ses appuis et ses conséquences", "Whole graph; the selection highlights its grounds and consequences"],
+    anc: ["Chemin vers", "Path to", "Seulement le chemin qui mène à l'élément sélectionné", "Only the path leading to the selected element"],
+    desc: ["Conséquences", "Consequences", "Seulement ce qui découle de l'élément sélectionné", "Only what follows from the selected element"],
+    near: ["Voisinage", "Neighbours", "Voisins directs", "Direct neighbours"] };
+  for (const [m, [f, en, tf, ten]] of Object.entries(modes)) { const x = $(`#toolbar [data-mode="${m}"]`); x.textContent = tr(f, en); x.title = tr(tf, ten); }
+  $("#fit").textContent = tr("Recadrer", "Fit"); $("#fit").title = tr("Recadrer (touche F)", "Fit (key F)");
+  $("#read").textContent = tr("Lecture", "Read"); $("#read").title = tr("Masquer le graphe pour lire (touche R)", "Hide the graph to read (key R)");
+  $("#empty").textContent = tr("Aucun élément à afficher avec ces filtres.", "No element to show with these filters.");
+  $("#resizer").title = tr("Glisser pour redimensionner", "Drag to resize");
+  $("#meta").textContent = tr(`${els.length} éléments · généré le ${DATA.generated}`, `${els.length} elements · generated ${DATA.generated}`);
+  document.querySelectorAll(".langsw [data-lang]").forEach(x => { x.classList.toggle("on", x.dataset.lang === LANG); x.setAttribute("aria-pressed", x.dataset.lang === LANG); });
+  renderLegend();
+}
+function setLang(l) {
+  if (!LANGS.includes(l) || l === LANG) return;
+  LANG = l;
+  try { localStorage.setItem("treillis-lang", l); } catch {}
+  const u = new URL(location.href); u.searchParams.set("lang", l);
+  history.replaceState(history.state, "", u.pathname + u.search + u.hash);
+  applyData(); setLabels(); runAudit(); applyStatic();
+  renderFilters(); renderTrail(); renderView(decodeURIComponent(location.hash.slice(1)) || "home"); renderList(); renderGraph();
+}
+document.querySelector(".langsw").onclick = ev => { const x = ev.target.closest("[data-lang]"); if (x) setLang(x.dataset.lang); };
+applyStatic();
 renderFilters();
 route();
 requestAnimationFrame(fit);
