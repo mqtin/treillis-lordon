@@ -1,0 +1,147 @@
+#!/usr/bin/env python3
+"""Contrôles de cohérence du treillis (AGENT.md § 8).
+
+Les mêmes contrôles sont affichés dans l'onglet « Audit » de l'explorateur ;
+ce script permet de les lancer sans navigateur et renvoie un code d'erreur.
+
+Usage :
+    python outils/check.py
+"""
+from __future__ import annotations
+
+import re
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from build_explorer import ROOT, collect  # noqa: E402
+
+TYPES = {"definition", "spinoza", "marx", "these", "refutee"}
+STATUTS = {"brouillon", "verifie-texte"}
+PREFIX = {"definition": "D", "spinoza": "S", "marx": "M", "these": "T", "refutee": "R"}
+MAX_CITATION = 300
+LOC_RE = re.compile(r"^(\d\d)\.(\d+)$")
+# Copie locale de SpinozaGraph, si elle est à côté : pour vérifier que les renvois à l'Éthique existent.
+SPINOZA_ELEMENTS = ROOT.parent / "SpinozaGraph" / "elements"
+
+
+def main() -> int:
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
+    data = collect()
+    els = data["elements"]
+    by_id = {e["id"]: e for e in els}
+    errors, warnings = [], []
+
+    for p in data["problems"]:
+        errors.append(f"{p['file']} : {p['msg']}")
+
+    ids = [e["id"] for e in els]
+    for i in sorted({i for i in ids if ids.count(i) > 1}):
+        errors.append(f"{i} : identifiant en double")
+
+    ethique_ids = None
+    if SPINOZA_ELEMENTS.is_dir():
+        ethique_ids = {p.stem for p in SPINOZA_ELEMENTS.glob("*/*.md")}
+
+    for e in els:
+        eid, t = e["id"], e["type"]
+        if t not in TYPES:
+            errors.append(f"{eid} : type « {t} » inconnu")
+        elif not eid.startswith(PREFIX[t]):
+            errors.append(f"{eid} : un élément de type {t} commence par {PREFIX[t]}")
+        if e["statut_revision"] not in STATUTS:
+            errors.append(f"{eid} : statut_revision « {e['statut_revision']} »")
+        if e["partie"] not in data["parties"]:
+            warnings.append(f"{eid} : partie « {e['partie']} » sans fiche dans parties/")
+        if not e["enonce"]:
+            errors.append(f"{eid} : énoncé vide")
+        if not e["loc"]:
+            errors.append(f"{eid} : aucun repère (loc)")
+        for l in e["loc"]:
+            m = LOC_RE.match(l)
+            if not m:
+                errors.append(f"{eid} : repère « {l} » mal formé (attendu : 08.4)")
+            elif m.group(1) not in data["sections"]:
+                errors.append(f"{eid} : repère « {l} » : section {m.group(1)} absente de sections.yaml")
+        if len(e["citation"]) > MAX_CITATION:
+            errors.append(f"{eid} : citation de {len(e['citation'])} caractères (max. {MAX_CITATION})")
+        for d in e["depends_on"]:
+            base = d.split("-C")[0]
+            if base not in by_id:
+                errors.append(f"{eid} dépend de {d}, qui n'existe pas")
+            elif t != "these" and by_id[base]["type"] in {"these", "refutee"}:
+                warnings.append(f"{eid} ({t}) dépend de {d} ({by_id[base]['type']})")
+        for r in e["contre"]:
+            if r not in by_id:
+                errors.append(f"{eid} contre {r}, qui n'existe pas")
+            elif by_id[r]["type"] != "refutee":
+                errors.append(f"{eid} contre {r}, qui n'est pas une position réfutée")
+        if t == "spinoza" and not e["ethique"] and not e["ref"]:
+            errors.append(f"{eid} : prémisse de Spinoza sans renvoi (ethique ou ref)")
+        if ethique_ids is not None:
+            for x in e["ethique"]:
+                if x not in ethique_ids:
+                    errors.append(f"{eid} : « {x} » n'existe pas dans SpinozaGraph")
+        if t == "these":
+            if not isinstance(e["lien_explicite"], bool):
+                warnings.append(f"{eid} : lien_explicite absent")
+            if "Démonstration" not in e["sections"] and "Argumentation" not in e["sections"]:
+                errors.append(f"{eid} : ni Démonstration ni Argumentation")
+        if "Démonstration" in e["sections"] or "Argumentation" in e["sections"]:
+            refs = {r for r in e["demo_refs"] if r != eid and r not in e["contre"]}
+            deps = set(e["depends_on"])
+            if refs - deps:
+                errors.append(f"{eid} invoque sans déclarer : {', '.join(sorted(refs - deps))}")
+            if deps - refs:
+                errors.append(f"{eid} déclare sans invoquer : {', '.join(sorted(deps - refs))}")
+
+    for r in (e for e in els if e["type"] == "refutee"):
+        if not any(r["id"] in e["contre"] for e in els):
+            warnings.append(f"{r['id']} : aucune thèse ne la réfute")
+
+    # Cycles
+    state = {}
+
+    def visit(v, path):
+        state[v] = 1
+        path.append(v)
+        for p in by_id[v]["depends_on"]:
+            p = p.split("-C")[0]
+            if p not in by_id:
+                continue
+            if state.get(p) == 1:
+                errors.append("cycle : " + " → ".join(path[path.index(p):] + [p]))
+            elif not state.get(p):
+                visit(p, path)
+        path.pop()
+        state[v] = 2
+
+    for e in els:
+        if not state.get(e["id"]):
+            visit(e["id"], [])
+
+    # INDEX.md
+    idx = set(data["index_ids"])
+    for e in els:
+        if e["id"] not in idx:
+            warnings.append(f"{e['id']} absent de INDEX.md")
+    for i in idx:
+        if i not in by_id and not any(i in e["corollaires"] for e in els):
+            warnings.append(f"{i} listé dans INDEX.md sans fichier")
+
+    # Droits : rien de source/ ne doit être suivi par Git
+    gi = ROOT / ".gitignore"
+    if not gi.exists() or "source/" not in gi.read_text(encoding="utf-8"):
+        errors.append(".gitignore doit exclure source/ (texte du livre, sous droits)")
+
+    for w in warnings:
+        print("attention :", w)
+    for x in errors:
+        print("ERREUR :", x)
+    print(f"{len(els)} éléments · {len(errors)} erreur(s) · {len(warnings)} avertissement(s)")
+    return 1 if errors else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -1,0 +1,46 @@
+# Sections du livre, d'après la table des matières de l'EPUB (titres de Lordon).
+# Repère d'un passage : « section.paragraphe », ex. 08.4 = section 08, 4e paragraphe (AGENT.md § 6).
+
+"01": {titre: "Avant-propos", partie: "0"}
+"02": {titre: "I. FAIRE FAIRE", partie: "1"}
+"03": {titre: "Le désir de faire quelque chose", partie: "1"}
+"04": {titre: "Le désir de faire faire : patronat et enrôlement", partie: "1"}
+"05": {titre: "Intérêt, désir, mise en mouvement", partie: "1"}
+"06": {titre: "La vie nue et l’argent", partie: "1"}
+"07": {titre: "La monnaie rapport, l’argent désir", partie: "1"}
+"08": {titre: "La servitude volontaire n’existe pas", partie: "1"}
+"09": {titre: "L’asymétrie de l’initiative monétaire", partie: "1"}
+"10": {titre: "Domination à tous les étages", partie: "1"}
+"11": {titre: "Pressions ambiantes et remontée de la violence (contrainte actionnariale et concurrence)", partie: "1"}
+"12": {titre: "Mobilisation joyeuse et aliénation marchande", partie: "1"}
+"13": {titre: "L’enrôlement comme alignement", partie: "1"}
+"14": {titre: "α =0 !", partie: "1"}
+"15": {titre: "Intensification de la crainte", partie: "1"}
+"16": {titre: "La liquidité, le fantasme du désir-maître capitaliste", partie: "1"}
+"17": {titre: "Tyrannie et terreur", partie: "1"}
+"18": {titre: "II. JOYEUX AUTOMOBILES (Salariés : les faire marcher)", partie: "2"}
+"19": {titre: "Des affects joyeux intrinsèques", partie: "2"}
+"20": {titre: "Les apories du consentement", partie: "2"}
+"21": {titre: "L’obéissance joyeuse", partie: "2"}
+"22": {titre: "Le ré-enchantement spontané", partie: "2"}
+"23": {titre: "L’amour du maître", partie: "2"}
+"24": {titre: "Les images vocationnelles", partie: "2"}
+"25": {titre: "Le totalitarisme de la possession des âmes", partie: "2"}
+"26": {titre: "Girl friend experience (après le don des larmes)", partie: "2"}
+"27": {titre: "L’insondable mystère du désir enrôlé", partie: "2"}
+"28": {titre: "Il n’y a pas d’intériorité (ni d’intériorisation)", partie: "2"}
+"29": {titre: "Les risques du constructivisme du désir", partie: "2"}
+"30": {titre: "Amor fati capitalistis", partie: "2"}
+"31": {titre: "Le voile des affects joyeux, le fond des affects tristes", partie: "2"}
+"32": {titre: "III. DOMINATION, ÉMANCIPATION", partie: "3"}
+"33": {titre: "La domination repensée à l’usage du « consentement »", partie: "3"}
+"34": {titre: "Division du désir et imaginaire de l’impuissance", partie: "3"}
+"35": {titre: "L’exploitation passionnelle", partie: "3"}
+"36": {titre: "Communisme ou totalitarisme (le totalitarisme, stade ultime de capitalisme)", partie: "3"}
+"37": {titre: "Alors le (ré) communisme !", partie: "3"}
+"38": {titre: "Les passions séditieuses", partie: "3"}
+"39": {titre: "Devenir perpendiculaire", partie: "3"}
+"40": {titre: "La défixation (critique de la (dés-) aliénation)", partie: "3"}
+"41": {titre: "L’histoire comme mécontentement (brouillages et reconfigurations du paysage de classe)", partie: "3"}
+"42": {titre: "Communisme… désir et servitude !", partie: "3"}
+"43": {titre: "« Une viande humaine »", partie: "3"}

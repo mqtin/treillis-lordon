@@ -1,0 +1,227 @@
+#!/usr/bin/env python3
+"""Génère explorer.html : interface d'exploration du graphe et des textes.
+
+Lit le front-matter YAML et le corps de chaque élément (definitions/, premisses/,
+theses/, refutees/), les fiches de parties/, ainsi que AGENT.md et INDEX.md, puis
+injecte le tout dans un fichier HTML autonome (aucune dépendance réseau).
+
+Adapté de l'explorateur d'Homo Status (status-and-politics/outils/build_explorer.py).
+
+Usage :
+    python outils/build_explorer.py           # génère explorer.html
+    python outils/build_explorer.py --watch   # régénère à chaque modification
+"""
+from __future__ import annotations
+
+import json
+import re
+import sys
+import time
+from datetime import datetime
+from pathlib import Path
+
+try:
+    import yaml
+except ImportError:  # pragma: no cover
+    sys.exit("PyYAML est requis : pip install pyyaml")
+
+ROOT = Path(__file__).resolve().parent.parent
+TEMPLATE = Path(__file__).resolve().parent / "explorer_template.html"
+OUTPUT = ROOT / "explorer.html"
+
+ELEMENT_DIRS = ["definitions", "premisses", "theses", "refutees"]
+DOC_FILES = ["PARCOURS.md", "AGENT.md", "INDEX.md"]
+
+# Parties (AGENT.md § 4) : P (prémisses), puis l'avant-propos (0) et les chapitres du livre.
+PARTIE_DIR = "parties"
+PARTIE_ORDER = ["P", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
+
+ID_PATTERN = r"[DSMTR]\d{2,3}(?:-C\d+)?"
+ID_RE = re.compile(rf"\b({ID_PATTERN})\b")
+FRONT_RE = re.compile(r"\A---\s*\n(.*?)\n---\s*\n?(.*)\Z", re.S)
+
+
+def split_front_matter(text: str):
+    m = FRONT_RE.match(text.replace("\r\n", "\n"))
+    if not m:
+        return None, text
+    try:
+        meta = yaml.safe_load(m.group(1)) or {}
+    except yaml.YAMLError as exc:
+        return {"_yaml_error": str(exc)}, m.group(2)
+    return meta, m.group(2)
+
+
+def as_list(value):
+    if value is None or value == "":
+        return []
+    if isinstance(value, list):
+        return [str(v).strip() for v in value if v is not None and str(v).strip()]
+    return [s.strip() for s in str(value).split(",") if s.strip()]
+
+
+def sections(body: str) -> dict:
+    """Découpe le corps en sections de niveau 2 (## Titre)."""
+    out, current, buf = {}, None, []
+    for line in body.split("\n"):
+        h = re.match(r"^##\s+(.+?)\s*$", line)
+        if h and not line.startswith("###"):
+            if current is not None:
+                out[current] = "\n".join(buf).strip()
+            current, buf = h.group(1), []
+        else:
+            buf.append(line)
+    if current is not None:
+        out[current] = "\n".join(buf).strip()
+    return out
+
+
+def load_parties():
+    out = []
+    folder = ROOT / PARTIE_DIR
+    if folder.is_dir():
+        for p in folder.glob("*.md"):
+            meta, body = split_front_matter(p.read_text(encoding="utf-8"))
+            meta = meta if isinstance(meta, dict) else {}
+            if "_yaml_error" in meta:
+                print(f"Attention : YAML invalide dans {p.name} : {meta['_yaml_error']}", file=sys.stderr)
+            pid = str(meta.get("id") or p.stem)
+            out.append({"id": pid, "titre": meta.get("titre") or "", "resume": meta.get("resume") or "",
+                        "loc": meta.get("loc") or "",
+                        "body": body.strip(), "file": p.relative_to(ROOT).as_posix()})
+    out.sort(key=lambda x: PARTIE_ORDER.index(x["id"]) if x["id"] in PARTIE_ORDER else 99)
+    return out
+
+
+def load_sections():
+    """Titres des sections du livre (sections.yaml), pour afficher les repères « 08.4 »."""
+    p = ROOT / "sections.yaml"
+    if not p.exists():
+        return {}
+    raw = yaml.safe_load(p.read_text(encoding="utf-8")) or {}
+    return {str(k): {"titre": str(v.get("titre", "")), "partie": str(v.get("partie", ""))} for k, v in raw.items()}
+
+
+def load_elements():
+    elements, problems = [], []
+    for d in ELEMENT_DIRS:
+        folder = ROOT / d
+        if not folder.is_dir():
+            continue
+        for path in sorted(folder.glob("*.md")):
+            text = path.read_text(encoding="utf-8")
+            meta, body = split_front_matter(text)
+            rel = path.relative_to(ROOT).as_posix()
+            if meta is None:
+                problems.append({"kind": "frontmatter", "file": rel, "msg": "Pas de front-matter YAML."})
+                continue
+            if "_yaml_error" in meta:
+                problems.append({"kind": "frontmatter", "file": rel, "msg": "YAML invalide : " + meta["_yaml_error"]})
+                continue
+            eid = str(meta.get("id") or path.stem)
+            if eid != path.stem:
+                problems.append({"kind": "frontmatter", "file": rel,
+                                 "msg": f"L'id du front-matter ({eid}) diffère du nom de fichier ({path.stem})."})
+            enonce = meta.get("enonce") or ""
+            citation = meta.get("citation") or ""
+            secs = sections(body)
+            argued = secs.get("Démonstration", "") + "\n" + secs.get("Argumentation", "")
+            corollaires = sorted(set(re.findall(rf"\b{re.escape(eid)}-C\d+\b", body)))
+            elements.append({
+                "id": eid,
+                "file": rel,
+                "type": meta.get("type") or "",
+                "partie": str(meta.get("partie") if meta.get("partie") is not None else ""),
+                "titre": meta.get("titre") or "",
+                "enonce": " ".join(str(enonce).split()),
+                "citation": " ".join(str(citation).split()),
+                "loc": as_list(meta.get("loc")),
+                "depends_on": as_list(meta.get("depends_on")),
+                "contre": as_list(meta.get("contre")),
+                "ethique": as_list(meta.get("ethique")),
+                "ref": str(meta.get("ref") or ""),
+                "lien_explicite": meta.get("lien_explicite"),
+                "statut_revision": meta.get("statut_revision"),
+                "body": body.strip(),
+                "sections": list(secs.keys()),
+                "demo_refs": sorted(set(ID_RE.findall(argued))),
+                "mentions": sorted(set(ID_RE.findall(body))),
+                "corollaires": corollaires,
+                "mtime": path.stat().st_mtime,
+            })
+    return elements, problems
+
+
+def load_documents():
+    docs = []
+    for name in DOC_FILES:
+        p = ROOT / name
+        if p.exists():
+            # Pas de « mentions » : AGENT.md et INDEX.md citent des identifiants en exemple ou en liste.
+            docs.append({"name": name, "kind": "projet", "body": p.read_text(encoding="utf-8")})
+    return docs
+
+
+def index_ids():
+    """Identifiants listés dans les tableaux de INDEX.md (première colonne)."""
+    p = ROOT / "INDEX.md"
+    if not p.exists():
+        return []
+    ids = []
+    for line in p.read_text(encoding="utf-8").splitlines():
+        m = re.match(rf"^\|\s*({ID_PATTERN})\s*\|", line)
+        if m:
+            ids.append(m.group(1))
+    return ids
+
+
+def collect():
+    elements, problems = load_elements()
+    parties = load_parties()
+    return {
+        "generated": datetime.now().strftime("%Y-%m-%d %H:%M"),
+        "elements": elements,
+        "documents": load_documents(),
+        "index_ids": index_ids(),
+        "parties": {p["id"]: p["titre"] for p in parties},
+        "partie_docs": parties,
+        "sections": load_sections(),
+        "problems": problems,
+    }
+
+
+def build() -> Path:
+    payload = json.dumps(collect(), ensure_ascii=False).replace("</", "<\\/")
+    html = TEMPLATE.read_text(encoding="utf-8").replace("/*__DATA__*/null", payload)
+    OUTPUT.write_text(html, encoding="utf-8")
+    return OUTPUT
+
+
+def snapshot():
+    files = [ROOT / n for n in DOC_FILES] + [TEMPLATE, ROOT / "sections.yaml"]
+    for d in ELEMENT_DIRS + [PARTIE_DIR]:
+        if (ROOT / d).is_dir():
+            files += list((ROOT / d).glob("*.md"))
+    return {str(f): f.stat().st_mtime for f in files if f.exists()}
+
+
+def main():
+    out = build()
+    print(f"Écrit : {out}")
+    if "--watch" in sys.argv:
+        print("Surveillance des modifications (Ctrl+C pour arrêter)…")
+        last = snapshot()
+        try:
+            while True:
+                time.sleep(1)
+                now = snapshot()
+                if now != last:
+                    last = now
+                    build()
+                    print(f"[{datetime.now():%H:%M:%S}] régénéré")
+        except KeyboardInterrupt:
+            pass
+
+
+if __name__ == "__main__":
+    main()
