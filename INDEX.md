@@ -182,6 +182,7 @@ Table de tous les éléments, par partie. Chaque ligne : identifiant, titre, rep
 
 ## Journal
 
+- **2026-11-14** : relecture par l'auteur terminée. Une correction : R04 (objection de la symétrie du capital et du travail) réécrite en trois langues pour suivre le mouvement de 09.2 (objection, part de vérité accordée, réfutation par T010), avec citation.
 - **2026-11-13** : version anglaise : les 137 éléments, les 5 parties, `PARCOURS.en.md` et `NOTICE.en.md` traduits ; explorateur bilingue (bouton FR / EN, `?lang=en`, préférence partagée avec l'accueil du site), métadonnées (description, Open Graph, `hreflang`, langue du document) ; `check.py` et l'audit vérifient que la version anglaise est complète et garde les mêmes étapes, identifiants et repères (AGENT.md § 5 bis).
 - **2026-11-13** : licences et droits : `LICENSE` (code GPL-3.0, reconstruction CC BY-SA 4.0, citations exclues), `NOTICE.md` (sources, ayants droit, cadre du droit de citation), textes complets dans `LICENSES/` ; mention « Droits » sur l'accueil de l'explorateur ; `check.py` vérifie qu'aucun fichier de `source/` n'est suivi et qu'aucune citation du corps ne dépasse 300 caractères.
 - **2026-11-13** : audit complet avant publication : contrôles mécaniques, audit de forme et audit des repères sans remarque ; corps des 46 prémisses relu (S09 « citée quatre fois », ponctuation de S29) ; droits : 433 passages cités, le plus long de Lordon fait 171 caractères, ceux de Spinoza 205 au plus ; aucun fichier de `source/` versionné.

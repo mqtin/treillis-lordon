@@ -4,7 +4,7 @@ L'argument de Frédéric Lordon, *Capitalisme, désir et servitude. Marx et Spin
 
 C'est une reconstruction, pas une critique ni une reproduction : les énoncés reformulent le livre, avec leurs repères dans le livre, et les citations sont courtes. Pour lire Lordon, lisez Lordon.
 
-**Terminé, en relecture.** Le livre est entièrement reconstruit (137 éléments vérifiés contre le texte). En ligne : <https://treillis.qpetit.com/lordon>.
+**Terminé.** Le livre est entièrement reconstruit (137 éléments vérifiés contre le texte, relecture par l'auteur achevée le 14 novembre 2026). En ligne : <https://treillis.qpetit.com/lordon>.
 
 ## Utilisation
 
